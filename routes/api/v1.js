@@ -77,14 +77,16 @@ function getFileDescriptor(req, cb) {
 function cleanUrl(url) {
   var parts = url.split('/');
   var url = "";
+  var count = 0;
 
   _.each(parts, function(part) {
     if(part.length > 0) {
       url += "/" + part;
+      count += 1;
     }
   });
 
-  if(url.length == 0) {
+  if(url.length == 0 || count > 255) {
     url = "/";
   }
 
@@ -95,9 +97,32 @@ function cleanUrl(url) {
 /// Download a file or its metadata, based on the format query parameter.
 ///
 router.get("*", function(req, res) {
-  var format = req.query.format || req.body.format || null;
+  var format = req.query.f || req.body.f || null;
   if(!_.isString(format)) {
     format = null;
+  }
+
+  if(format == 'history') {
+    models.FileDescriptor.find({ url: cleanUrl(req.path) }).exec(function(err, files) {
+      var result = [];
+      _.each(files, function(file) {
+        result.push(file.clean());
+      });
+      res.json(result);
+    });
+
+    return;
+  } else if(format == 'dir') {
+    var namespace = cleanUrl(req.path);
+    models.FileDescriptor.aggregate([{ $match: { namespace: namespace } }, { $group: { _id: "$url" }}]).exec(function(err, entries) {
+      var results = [];
+      _.each(entries, function(entry) {
+        results.push(entry._id.substring(namespace.length));
+      });
+      res.json(results);
+    });
+
+    return;
   }
 
   getFileDescriptor(req, function(err, file) {
@@ -111,7 +136,7 @@ router.get("*", function(req, res) {
       res.status(404).json({ error: "file not found" });
     } else {
       // File exists, check the format
-      if(format == "metadata") {
+      if(format == "stat") {
         // Send metadata
         logger.info("get metadata: %s", req.path);
         res.json(file.clean());
