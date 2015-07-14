@@ -1,3 +1,7 @@
+///
+/// @copyright 2015 Adam Meily <meily.adam@gmail.com>
+///
+
 var express = require('express');
 var router = express.Router();
 var models = require('../../models');
@@ -8,6 +12,7 @@ var ObjectId = require('mongoose').Types.ObjectId;
 var fs = require('fs');
 var logger = require('../../logger');
 var path = require('path');
+
 var VALID_FILE_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,._ &";
 
 // TODO comments
@@ -103,25 +108,23 @@ router.get("*", function(req, res) {
   }
 
   if(format == 'history') {
-    models.FileDescriptor.find({ url: cleanUrl(req.path) }).exec(function(err, files) {
-      var result = [];
-      _.each(files, function(file) {
-        result.push(file.clean());
-      });
-      res.json(result);
-    });
+    models.FileDescriptor.find({ url: cleanUrl(req.path) }).stream({
+      transform: function(doc) {
+        return JSON.stringify(doc.clean());
+      }
+    }).pipe(res);
 
     return;
   } else if(format == 'dir') {
     var namespace = cleanUrl(req.path);
-    models.FileDescriptor.aggregate([{ $match: { namespace: namespace } }, { $group: { _id: "$url" }}]).exec(function(err, entries) {
-      var results = [];
-      _.each(entries, function(entry) {
-        results.push(entry._id.substring(namespace.length));
-      });
-      res.json(results);
-    });
-
+    models.TreeDescriptor.find({ namespace: namespace }).stream({
+      transform: function(doc) {
+        return JSON.stringify({
+          name: doc.name,
+          type: doc.type
+        });
+      }
+    }).pipe(res);
     return;
   }
 
@@ -234,6 +237,8 @@ router.post("*", function(req, res) {
 
     if(prev == null) {
       // This is a new file descriptor.
+
+      models.TreeDescriptor.addFile(file);
 
       if(!apiKey && req.body.protect === true) {
         // generate API key
