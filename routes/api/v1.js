@@ -117,12 +117,13 @@ router.get("*", function(req, res) {
     return;
   } else if(format == 'dir') {
     var namespace = cleanUrl(req.path);
+    res.set("Content-Type", "text/event-stream");
     models.TreeDescriptor.find({ namespace: namespace }).stream({
       transform: function(doc) {
-        return JSON.stringify({
+        return "data: " + JSON.stringify({
           name: doc.name,
           type: doc.type
-        });
+        }) + "\n\n";
       }
     }).pipe(res);
     return;
