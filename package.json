@@ -1,6 +1,14 @@
 {
   "name": "raziel",
   "version": "0.1.0",
+  "description": "REST server for storing and querying versioned files.",
+  "homepage": "https://github.com/ameily/raziel",
+  "license": "BSD-2-Clause",
+  "author": {
+    "name": "Adam Meily",
+    "url": "https://github.com/ameily"
+  },
+  "repository": "github:ameily/raziel",
   "private": true,
   "scripts": {
     "start": "node ./bin/www"

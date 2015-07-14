@@ -1,3 +1,7 @@
+///
+/// @copyright 2015 Adam Meily <meily.adam@gmail.com>
+///
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -27,6 +31,7 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
 app.use(multer({
   onFileUploadStart: function(file, req, res) {
     // On upload start, begin hashing
@@ -66,16 +71,16 @@ app.use(multer({
     }
   }
 }));
+
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 GridFs.mongo = mongoose.mongo;
 
-mongoose.connect("mongodb://localhost/enoch");
+mongoose.connect("mongodb://localhost/raziel");
 
 mongoose.connection.once('open', function() {
   var gridfs = GridFs(mongoose.connection.db);
-
 
   app.use(function(req, res, next) {
     // add GridFs to each request
@@ -99,7 +104,7 @@ mongoose.connection.once('open', function() {
 
   // development error handler
   // will print stacktrace
-  if (app.get('env') === 'development') {
+  if(app.get('env') === 'development') {
     app.use(function(err, req, res, next) {
       res.status(err.status || 500);
       res.render('error', {
