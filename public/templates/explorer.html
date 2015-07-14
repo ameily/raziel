@@ -1,0 +1,15 @@
+<h2 data-bind="text: url"></h2>
+
+<div>
+  <ul data-bind="foreach: items">
+    <li data-bind="if: isTree()">
+      <a data-bind="text: name, click: $parent.gotoTree" href="#"></a>
+    </li>
+    <li data-bind="if: isLeaf()">
+      <a data-bind="text: name, click: $parent.openFile" href="#"></a>
+    </li>
+  </ul>
+</div>
+
+<div data-bind="visible: selectedFile">
+</div>

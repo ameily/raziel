@@ -16,7 +16,7 @@ var mmm = require('mmmagic');
 var crypto = require('crypto');
 var models = require('./models');
 
-//var routes = require('./routes/index');
+var routes = require('./routes/index');
 //var users = require('./routes/users');
 
 var app = express();
@@ -89,7 +89,7 @@ mongoose.connection.once('open', function() {
     };
     next();
   })
-  //app.use('/', routes);
+  app.use('/', routes);
   //app.use('/users', users);
   app.use('/v1', apiV1);
 
