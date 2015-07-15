@@ -1,0 +1,24 @@
+{
+  "name": "raziel",
+  "version": "1.0.0",
+  "homepage": "https://github.com/ameily/raziel",
+  "moduleType": [
+    "amd"
+  ],
+  "license": "BSD-2-Clause",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "knockout": "~3.3.0",
+    "jsonpipe": "*",
+    "underscore": "~1.8.3",
+    "requirejs": "~2.1.19",
+    "bootstrap": "~3.3.5",
+    "requirejs-text": "~2.0.14"
+  }
+}

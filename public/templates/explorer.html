@@ -2,14 +2,13 @@
 
 <div>
   <ul data-bind="foreach: items">
-    <li data-bind="if: isTree()">
-      <a data-bind="text: name, click: $parent.gotoTree" href="#"></a>
-    </li>
-    <li data-bind="if: isLeaf()">
-      <a data-bind="text: name, click: $parent.openFile" href="#"></a>
+    <li>
+      <span data-bind="visible: isTree()">
+        <a data-bind="text: name, click: $parent.gotoTree" href="#"></a>
+      </span>
+      <span data-bind="visible: isLeaf()">
+        <a data-bind="text: name, click: $parent.openFile" href="#"></a>
+      </span>
     </li>
   </ul>
-</div>
-
-<div data-bind="visible: selectedFile">
 </div>

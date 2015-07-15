@@ -1,7 +1,9 @@
 require.config({
   paths: {
-    underscore: "underscore-min",
-    knockout: "knockout-3.3.0"
+    underscore: "underscore/underscore-min",
+    knockout: "knockout/dist/knockout",
+    jsonpipe: "jsonpipe/jsonpipe",
+    text: "requirejs-text/text"
   },
   baseUrl: "/vendor"
 });

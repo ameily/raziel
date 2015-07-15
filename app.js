@@ -16,7 +16,7 @@ var mmm = require('mmmagic');
 var crypto = require('crypto');
 var models = require('./models');
 
-var routes = require('./routes/index');
+var explorer = require('./routes/explorer');
 //var users = require('./routes/users');
 
 var app = express();
@@ -74,6 +74,7 @@ app.use(multer({
 
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/vendor', express.static(path.join(__dirname, 'bower_components')));
 
 GridFs.mongo = mongoose.mongo;
 
@@ -89,7 +90,7 @@ mongoose.connection.once('open', function() {
     };
     next();
   })
-  app.use('/', routes);
+  app.use('/', explorer);
   //app.use('/users', users);
   app.use('/v1', apiV1);
 
