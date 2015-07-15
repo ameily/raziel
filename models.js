@@ -27,7 +27,7 @@ var FileDescriptorSchema = new mongoose.Schema({
   sha256: String
 });
 
-FileDescriptorSchema.methods.clean = function() {
+FileDescriptorSchema.methods.toClient = function() {
   return {
     url: this.url,
     version: this.version,
@@ -111,6 +111,13 @@ TreeDescriptorSchema.statics.addFile = function(file) {
       }
     });
   });
+};
+
+TreeDescriptorSchema.methods.toClient = function() {
+  return {
+    name: this.name,
+    type: this.type
+  };
 };
 
 var TreeDescriptor = mongoose.model('Tree', TreeDescriptorSchema);

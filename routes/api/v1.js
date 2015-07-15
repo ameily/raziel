@@ -18,6 +18,7 @@ var VALID_FILE_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 // TODO comments
 // TODO logging
 
+
 ///
 /// Clean a file name.
 ///
@@ -110,20 +111,16 @@ router.get("*", function(req, res) {
   if(format == 'history') {
     models.FileDescriptor.find({ url: cleanUrl(req.path) }).stream({
       transform: function(doc) {
-        return JSON.stringify(doc.clean());
+        return JSON.stringify(doc.toClient()) + "\n";
       }
     }).pipe(res);
 
     return;
   } else if(format == 'dir') {
     var namespace = cleanUrl(req.path);
-    res.set("Content-Type", "text/event-stream");
     models.TreeDescriptor.find({ namespace: namespace }).stream({
       transform: function(doc) {
-        return "data: " + JSON.stringify({
-          name: doc.name,
-          type: doc.type
-        }) + "\n\n";
+        return JSON.stringify(doc.toClient());
       }
     }).pipe(res);
     return;
