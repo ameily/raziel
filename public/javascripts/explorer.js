@@ -32,10 +32,12 @@ define([
 
     this.gotoTree({ url: params.url || "/" });
 
+    /*
     window.history.pushState({url: this.url() });
     window.onpopstate = function(state) {
       self.gotoTree(state.url);
     };
+    */
   };
 
   ExplorerViewModel.prototype.gotoTree = function(node) {
@@ -54,7 +56,8 @@ define([
   };
 
   ExplorerViewModel.prototype.openFile = function(file) {
-    this.selectedFile(file);
+    //this.selectedFile(file);
+    window.location = "/file?url=" + file.url;
   };
 
   ExplorerViewModel.prototype.closeFile = function() {
