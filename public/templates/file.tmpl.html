@@ -1,0 +1,34 @@
+<h1 data-bind="text: url"></h1>
+
+<div data-bind="foreach: history">
+  <table>
+    <tbody>
+      <tr data-bind="if: name">
+        <th>Name</th>
+        <td data-bind="text: name"></td>
+      </tr>
+      <tr>
+        <th>Size</th>
+        <td data-bind="text: size"></td>
+      </tr>
+
+      <tr>
+        <th>Version</th>
+        <td data-bind="text: version"></td>
+      </tr>
+
+      <tr>
+        <th>MD5</th>
+        <td data-bind="text: md5"></td>
+      </tr>
+      <tr>
+        <th>SHA-1</th>
+        <td data-bind="text: sha1"></td>
+      </tr>
+      <tr>
+        <th>SHA-256</th>
+        <td data-bind="text: sha256"></td>
+      </tr>
+    </table>
+    <hr>
+</div>
