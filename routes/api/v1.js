@@ -120,7 +120,7 @@ router.get("*", function(req, res) {
     var namespace = cleanUrl(req.path);
     models.TreeDescriptor.find({ namespace: namespace }).stream({
       transform: function(doc) {
-        return JSON.stringify(doc.toClient());
+        return JSON.stringify(doc.toClient()) + "\n";
       }
     }).pipe(res);
     return;
