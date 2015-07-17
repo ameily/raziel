@@ -8,7 +8,7 @@ html
     script(src='/vendor/requirejs/require.js' data-main="/javascripts/main")
   body
     div(class='container-fluid')
-      div(data-bind='component: { name: "raziel-explorer", params: {} }')
+      div(data-bind='component: { name: "raziel-explorer", params: { url: "#{url}"} }')
   
 
     

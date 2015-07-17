@@ -9,6 +9,7 @@ define([
   function TreeNode(params, cwd) {
     this.name = params.name;
     this.namespace = params.namespace || cwd || "";
+    this.selected = ko.observable(params.selected || false);
 
     if(this.namespace.length > 1) {
       this.url = this.namespace + '/' + this.name;
@@ -23,6 +24,8 @@ define([
   TreeNode.prototype.isLeaf = function() { return this.type == 'leaf'; };
 
   function ExplorerLocation() {
+    var self = this;
+
     this.crumbs = ko.observableArray([]);
     this.url = ko.observable("");
     this.namespace = ko.observable("");
@@ -32,14 +35,23 @@ define([
     }, this);
 
     _.bindAll(this, 'setLocation', 'gotoRoot');
+
+    //window.history.pushState({ url: '/' }, "", "/explorer");
+    window.onpopstate = function(event) {
+      self.setLocation(event.state.url, false);
+    };
   }
 
-  ExplorerLocation.prototype.setLocation = function(url) {
+  ExplorerLocation.prototype.setLocation = function(url, pushHistory) {
     if(!_.isString(url)) {
       url = url.url;
     }
 
     this.url(url);
+
+    if(pushHistory) {
+      window.history.pushState({ url: url }, "", "/explorer" + url);
+    }
 
     var parts = _.filter(url.split('/'), function(i) {
       return i.length > 0;
@@ -48,7 +60,6 @@ define([
     if(parts.length == 0) {
       this.crumbs.removeAll();
       this.name("raziel://");
-      this.url("/");
       return;
     }
 
@@ -88,7 +99,7 @@ define([
   };
 
   ExplorerLocation.prototype.gotoRoot = function() {
-    this.setLocation('/');
+    this.setLocation('/', true);
   };
 
 
@@ -115,7 +126,7 @@ define([
   ExplorerViewModel.prototype.gotoTree = function(node) {
     var url = _.isString(node) ? node : node.url;
 
-    this.path.setLocation(url);
+    this.path.setLocation(url, true);
 
     //this.update();
   };
@@ -123,6 +134,9 @@ define([
   ExplorerViewModel.prototype.update = function() {
     var url = this.path.url();
     var self = this;
+    if(this.selectedFile()) {
+      this.selectedFile(null);
+    }
 
     this.items.removeAll();
     jsonpipe.flow("/v1" + url + "?f=dir", {
@@ -135,7 +149,22 @@ define([
 
   ExplorerViewModel.prototype.openFile = function(file) {
     //this.selectedFile(file);
-    window.location = "/file?url=" + file.url;
+    //window.location = "/file?url=" + file.url;
+    if(this.selectedFile()) {
+      this.selectedFile().selected(false);
+    }
+
+    //TODO
+    file.latest = {
+      version: 1,
+      tag: "v1.4.3",
+      size: '31.47 Kb',
+      name: "Metasponse 1.4.3",
+      url: "/metasponse/release/1.4.3"
+    };
+
+    file.selected(true);
+    this.selectedFile(file);
   };
 
   ExplorerViewModel.prototype.closeFile = function() {

@@ -1,6 +1,7 @@
 <div class='row'>
   <div class='col-md-10'>
     <div>&nbsp;</div>
+
     <div>
 
 
@@ -11,15 +12,16 @@
       </span>
 
       &nbsp;
+    </div>
+    <h1 data-bind="text: path.name" style='margin-top: 0'></h1>
+    <hr>
   </div>
-  <h1 data-bind="text: path.name" style='margin-top: 0'></h1>
-  <hr>
 </div>
 
 <div class='row'>
   <div class='col-md-8'>
     <ul class='nav nav-pills nav-stacked' data-bind="foreach: items">
-      <li>
+      <li data-bind="css: { active: selected }">
         <!-- ko if: isTree() -->
           <a href="javascript:void(0)" data-bind="click: $parent.gotoTree" href="#">
             <span class='glyphicon glyphicon-folder-open'></span>
@@ -36,5 +38,45 @@
         <!-- /ko -->
       </li>
     </ul>
+  </div>
+
+  <div class='col-md-4' data-bind='visible: selectedFile, with: selectedFile'>
+    <div class='panel panel-primary'>
+      <div class='panel-heading'>
+        <div class='panel-title' data-bind="text: name"></div>
+      </div>
+      <table class='table' data-bind='with: latest'>
+        <tbody>
+          <tr data-bind='visible: name'>
+            <th>Name</th>
+            <td data-bind='text: name'></td>
+          </tr>
+          <tr>
+            <th>Version</th>
+            <td>
+              <span data-bind="text: version"></span>
+              <span class='label label-danger' data-bind='text: tag, visible: tag'></span>
+            </td>
+          </tr>
+          <tr>
+            <th>Size</th>
+            <td data-bind="text: size"></td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <button class='btn btn-success'>
+                <span class='glyphicon glyphicon-download'></span>
+                Download
+              </button>
+
+              <button class='btn btn-info pull-right'>
+                <span class='glyphicon glyphicon-info-sign'></span>
+                Details
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
