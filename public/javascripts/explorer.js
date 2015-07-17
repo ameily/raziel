@@ -1,5 +1,5 @@
 define([
-  'knockout', 'underscore', 'jsonpipe', 'text!/templates/explorer.html'
+  'knockout', 'underscore', 'jsonpipe', 'text!/templates/explorer.tmpl.html'
 ], function(ko, _, jsonpipe, template) {
 
   /*
@@ -22,35 +22,113 @@ define([
   TreeNode.prototype.isTree = function() { return this.type == 'tree'; };
   TreeNode.prototype.isLeaf = function() { return this.type == 'leaf'; };
 
+  function ExplorerLocation() {
+    this.crumbs = ko.observableArray([]);
+    this.url = ko.observable("");
+    this.namespace = ko.observable("");
+    this.name = ko.observable("");
+    this.isAtRoot = ko.computed(function() {
+      return this.url() == '/';
+    }, this);
+
+    _.bindAll(this, 'setLocation', 'gotoRoot');
+  }
+
+  ExplorerLocation.prototype.setLocation = function(url) {
+    if(!_.isString(url)) {
+      url = url.url;
+    }
+
+    this.url(url);
+
+    var parts = _.filter(url.split('/'), function(i) {
+      return i.length > 0;
+    });
+
+    if(parts.length == 0) {
+      this.crumbs.removeAll();
+      this.name("raziel://");
+      this.url("/");
+      return;
+    }
+
+    var current = this.crumbs();
+    this.name(parts.pop());
+
+    if(parts.length < current.length) {
+      var diff = current.length - parts.length;
+      for(var i = 0; i < diff; ++i) {
+        this.crumbs.pop();
+        current.pop();
+      }
+    }
+
+    var cwd = "";
+    for(var i = 0; i < parts.length; ++i) {
+      var name = parts[i];
+      cwd += "/" + name;
+
+      var item = {
+        url: cwd,
+        name: name
+      };
+
+      if(i >= current.length) {
+        this.crumbs.push(item);
+      } else if(name != current[i].name) {
+        var diff = current.length - i;
+        for(var j = 0; j < diff; ++j) {
+          current.pop();
+          this.crumbs.pop();
+        }
+
+        this.crumbs.push(item);
+      }
+    }
+  };
+
+  ExplorerLocation.prototype.gotoRoot = function() {
+    this.setLocation('/');
+  };
+
 
   function ExplorerViewModel(params) {
+    var self = this;
+
     this.items = ko.observableArray([]);
     this.selectedFile = ko.observable(params.selectedFile || null);
-    this.url = ko.observable("");
+    this.path = new ExplorerLocation();
 
-    _.bindAll(this, 'gotoTree', 'openFile', 'closeFile');
+    this.path.url.subscribe(function(url) {
+      self.update();
+    });
 
-    this.gotoTree({ url: params.url || "/" });
+    _.bindAll(this, 'gotoTree', 'openFile', 'closeFile', 'update');
 
-    /*
-    window.history.pushState({url: this.url() });
-    window.onpopstate = function(state) {
-      self.gotoTree(state.url);
-    };
-    */
+    this.gotoTree(params.url || "/" );
+  };
+
+  ExplorerViewModel.prototype.gotoRoot = function() {
+    this.gotoTree("/");
   };
 
   ExplorerViewModel.prototype.gotoTree = function(node) {
+    var url = _.isString(node) ? node : node.url;
+
+    this.path.setLocation(url);
+
+    //this.update();
+  };
+
+  ExplorerViewModel.prototype.update = function() {
+    var url = this.path.url();
     var self = this;
-    var url = "/v1" + node.url;
-    this.url(url);
 
     this.items.removeAll();
-
-    jsonpipe.flow(url + "?f=dir", {
+    jsonpipe.flow("/v1" + url + "?f=dir", {
       delimiter: "\n",
       success: function onNode(data) {
-        self.items.push(new TreeNode(data, node.url));
+        self.items.push(new TreeNode(data, url));
       }
     });
   };
