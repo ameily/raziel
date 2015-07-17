@@ -148,23 +148,18 @@ define([
   };
 
   ExplorerViewModel.prototype.openFile = function(file) {
-    //this.selectedFile(file);
-    //window.location = "/file?url=" + file.url;
+    var self = this;
+
     if(this.selectedFile()) {
       this.selectedFile().selected(false);
     }
 
-    //TODO
-    file.latest = {
-      version: 1,
-      tag: "v1.4.3",
-      size: '31.47 Kb',
-      name: "Metasponse 1.4.3",
-      url: "/metasponse/release/1.4.3"
-    };
-
     file.selected(true);
-    this.selectedFile(file);
+
+    $.getJSON("/v1" + file.url + "?f=stat", function(data) {
+      file.latest = data;
+      self.selectedFile(file);
+    });
   };
 
   ExplorerViewModel.prototype.closeFile = function() {
