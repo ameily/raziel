@@ -140,7 +140,7 @@ router.get("*", function(req, res) {
       if(format == "stat") {
         // Send metadata
         logger.info("get metadata: %s", req.path);
-        res.json(file.clean());
+        res.json(file.toClient());
       } else {
         // Send file content
         logger.info("get content: %s", req.path);
