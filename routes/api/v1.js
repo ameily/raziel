@@ -219,7 +219,7 @@ router.post("*", function(req, res) {
     var file = new models.FileDescriptor({
       url: url,
       namespace: path.dirname(url),
-      version: 0,
+      version: 1,
       name: req.body.name || null,
       gfsId: null,
       apiKey: null,
