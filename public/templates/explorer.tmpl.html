@@ -1,10 +1,7 @@
 <div class='row'>
   <div class='col-md-10'>
     <div>&nbsp;</div>
-
     <div>
-
-
       <a href="javascript:void(0)" data-bind="click: path.gotoRoot, visible: !path.isAtRoot()">raziel://</a>
 
       <span data-bind="foreach: path.crumbs">
@@ -59,20 +56,26 @@
             </td>
           </tr>
           <tr>
+            <th>Mimetype</th>
+            <td>
+              <code data-bind="text: mimetype"></code>
+            </td>
+          </tr>
+          <tr>
             <th>Size</th>
             <td data-bind="text: size"></td>
           </tr>
           <tr>
             <td colspan='2'>
-              <button class='btn btn-success'>
+              <a class='btn btn-success' data-bind='attr: { href: downloadUrl }' target='_blank'>
                 <span class='glyphicon glyphicon-download'></span>
                 Download
-              </button>
+              </a>
 
-              <button class='btn btn-info pull-right'>
+              <a class='btn btn-info pull-right' data-bind='attr: { href: infoUrl }' target='_blank'>
                 <span class='glyphicon glyphicon-info-sign'></span>
                 Details
-              </button>
+              </a>
             </td>
           </tr>
         </tbody>
