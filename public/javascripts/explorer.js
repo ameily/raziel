@@ -1,27 +1,16 @@
+///
+/// TODO fixed position for file summary component
+/// TODO query limits
+/// TODO "Load more" buttons
+/// TODO about and index page
+///
+
 define([
-  'knockout', 'underscore', 'jsonpipe', 'text!/templates/explorer.tmpl.html'
-], function(ko, _, jsonpipe, template) {
+  'knockout', 'underscore', 'jsonpipe', 'models', 'text!/templates/explorer.tmpl.html'
+], function(ko, _, jsonpipe, models, template) {
 
-  /*
-   * A Tree node, which may be a pointer to a TreeDescriptor or to a generic
-   * FileDescriptor.
-   */
-  function TreeNode(params, cwd) {
-    this.name = params.name;
-    this.namespace = params.namespace || cwd || "";
-    this.selected = ko.observable(params.selected || false);
-
-    if(this.namespace.length > 1) {
-      this.url = this.namespace + '/' + this.name;
-    } else {
-      this.url = this.namespace + this.name;
-    }
-
-    this.type = params.type;
-  }
-
-  TreeNode.prototype.isTree = function() { return this.type == 'tree'; };
-  TreeNode.prototype.isLeaf = function() { return this.type == 'leaf'; };
+  var TreeNode = models.TreeNode;
+  var FileDescriptor = models.FileDescriptor;
 
   function ExplorerLocation() {
     var self = this;
@@ -157,7 +146,9 @@ define([
     file.selected(true);
 
     $.getJSON("/v1" + file.url + "?f=stat", function(data) {
-      file.latest = data;
+      file.latest = new FileDescriptor(data);
+      //file.latest.downloadUrl = "/v1" + file.url;
+      //file.latest.infoUrl = "/file" + file.url;
       self.selectedFile(file);
     });
   };
