@@ -34,7 +34,7 @@ FileDescriptorSchema.methods.toClient = function() {
     downloads: this.downloads,
     name: this.name,
     lastDownload: this.lastDownload,
-    timestamp: this._id.getTimestamp().valueOf(),
+    timestamp: this._id.getTimestamp().valueOf() / 1000,
     mimetype: this.mimetype,
     size: this.size,
     md5: this.md5,
