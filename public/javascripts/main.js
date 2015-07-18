@@ -4,6 +4,7 @@ require.config({
     knockout: "knockout/dist/knockout",
     jsonpipe: "jsonpipe/jsonpipe",
     moment: "moment/moment",
+    models: "/javascripts/clientModels",
     text: "requirejs-text/text"
   },
   baseUrl: "/vendor"
