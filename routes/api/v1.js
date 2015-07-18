@@ -109,7 +109,7 @@ router.get("*", function(req, res) {
   }
 
   if(format == 'history') {
-    models.FileDescriptor.find({ url: cleanUrl(req.path) }).stream({
+    models.FileDescriptor.find({ url: cleanUrl(req.path) }).sort({ _id: -1 }).stream({
       transform: function(doc) {
         return JSON.stringify(doc.toClient()) + "\n";
       }
@@ -302,7 +302,7 @@ router.post("*", function(req, res) {
         res.status(500).json({ error: "failed to save file: " + err.toString()});
       } else {
         logger.debug("saved file descriptor: %s [%d]", url, file.version);
-        var json = file.clean();
+        var json = file.toClient();
         if(apiKey) {
           json.apiKey = apiKey;
         }
