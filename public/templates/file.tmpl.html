@@ -5,8 +5,77 @@
 </div>
 
 <div class='row'>
-  <div class='col-md-12'>
+  <div class='col-md-8'>
     <div data-bind="foreach: history">
+      <div class='panel panel-default'>
+        <div class='panel-heading'>
+          <h2 class='panel-title'>
+            <span data-bind="visible: name">
+              <span data-bind=" text: name"></span>
+              ::
+            </span>
+            v<span data-bind='text:version'></span>
+          </h2>
+        </div>
+        <table class='table'>
+          <tbody>
+            <tr data-bind="if: tag">
+              <th>Tag</th>
+              <td><span data-bind="text: tag" class='label label-danger'></span></td>
+            </tr>
+            <tr>
+              <th>Size</th>
+              <td data-bind="text: size"></td>
+            </tr>
+            <tr>
+              <th>Mimetype</th>
+              <td><code data-bind="text: mimetype"></code></td>
+            </tr>
+            <tr>
+              <th>Upload Date</th>
+              <td>
+                <span data-bind='text: timestamp.fromNow()' class='label label-primary'></span>
+              </td>
+            </tr>
+            <tr>
+              <th>Downloads</th>
+              <td>
+                <span class='badge' data-bind="text: downloads"></span>
+              </td>
+            </tr>
+            <tr data-bind="visible: lastDownload">
+              <th>Last Download</th>
+              <td>
+                <span data-bind="text: lastDownload ? lastDownload.fromNow() : 'never'" class="label label-info"></span>
+              </td>
+            </tr>
+            <tr>
+              <th>MD5</th>
+              <td><code data-bind="text: md5"></code></td>
+            </tr>
+            <tr>
+              <th>SHA-1</th>
+              <td><code data-bind="text: sha1"></code></td>
+            </tr>
+            <tr>
+              <th>SHA-256</th>
+              <td><code data-bind="text: sha256"></code></td>
+            </tr>
+            <tr>
+              <td colspan='2'>
+                <a class='btn btn-success btn-block' data-bind='attr: { href: downloadUrl }'>
+                  Download
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+      <!--
+      <h2>
+        v<span data-bind="text:version"></span>
+      </h2>
       <table class='table'>
         <tbody>
           <tr data-bind="if: name">
@@ -20,23 +89,27 @@
 
           <tr>
             <th>Version</th>
-            <td data-bind="text: version"></td>
+            <td>
+              <span data-bind="text: version"></span>
+              <span data-bind="text: tag, visible: tag" class='label label-danger'></span>
+            </td>
           </tr>
 
           <tr>
             <th>MD5</th>
-            <td data-bind="text: md5"></td>
+            <td><code data-bind="text: md5"></code></td>
           </tr>
           <tr>
             <th>SHA-1</th>
-            <td data-bind="text: sha1"></td>
+            <td><code data-bind="text: sha1"></code></td>
           </tr>
           <tr>
             <th>SHA-256</th>
-            <td data-bind="text: sha256"></td>
+            <td><code data-bind="text: sha256"></code></td>
           </tr>
         </tbody>
       </table>
     </div>
+  -->
   </div>
 </div>
