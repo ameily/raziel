@@ -27,8 +27,9 @@ router.get('/explorer/*', function(req, res, next) {
   res.render('explorer', { url: cleanUrl(url) });
 });
 
-router.get("/file", function(req, res, next) {
-  res.render('file', { url: req.query.url });
+router.get("/file/*", function(req, res, next) {
+  var url = req.path.substring("/file".length);
+  res.render('file', { url: cleanUrl(url) });
 });
 
 module.exports = router;
