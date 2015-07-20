@@ -109,21 +109,9 @@ router.get("*", function(req, res) {
   }
 
   if(format == 'history') {
-    models.FileDescriptor.find({ url: cleanUrl(req.path) }).sort({ _id: -1 }).stream({
-      transform: function(doc) {
-        return JSON.stringify(doc.toClient()) + "\n";
-      }
-    }).pipe(res);
-
-    return;
+    return streamHistory(req, res);
   } else if(format == 'dir') {
-    var namespace = cleanUrl(req.path);
-    models.TreeDescriptor.find({ namespace: namespace }).stream({
-      transform: function(doc) {
-        return JSON.stringify(doc.toClient()) + "\n";
-      }
-    }).pipe(res);
-    return;
+    return streamDirListing(req, res);
   }
 
   getFileDescriptor(req, function(err, file) {
@@ -170,6 +158,51 @@ router.get("*", function(req, res) {
     }
   });
 });
+
+function streamHistory(req, res) {
+  var cursor = models.FileDescriptor.find({ url: cleanUrl(req.path) }).sort({ _id: -1 });
+  var limit = parseInt(req.query.limit || req.body.limit || null);
+  var skip = parseInt(req.query.skip || req.body.skip || null);
+
+  if(!_.isNaN(limit) && _.isNumber(limit)) {
+    cursor = cursor.limit(limit);
+  }
+
+  if(!_.isNaN(skip) && _.isNumber(skip)) {
+    cursor = cursor.skip(skip);
+  }
+
+  cursor.stream({
+    transform: function(doc) {
+      return JSON.stringify(doc.toClient()) + "\n";
+    }
+  }).pipe(res);
+
+  return;
+}
+
+function streamDirListing(req, res) {
+  var namespace = cleanUrl(req.path);
+  var limit = req.query.limit || req.body.limit || null;
+  var skip = req.query.skip || req.body.skip || null;
+  var cursor = models.TreeDescriptor.find({ namespace: namespace }).sort({ name: 1 });
+
+  if(_.isNumber(limit)) {
+    cursor = cursor.limit(limit);
+  }
+
+  if(_.isNumber(skip)) {
+    cursor = cursor.skip(skip);
+  }
+
+  cursor.stream({
+    transform: function(doc) {
+      return JSON.stringify(doc.toClient()) + "\n";
+    }
+  }).pipe(res);
+
+  return;
+}
 
 
 ///
@@ -220,7 +253,7 @@ router.post("*", function(req, res) {
       url: url,
       namespace: path.dirname(url),
       version: 1,
-      name: req.body.name || null,
+      name: req.body.name || upload.originalname || null,
       gfsId: null,
       apiKey: null,
       downloads: 0,

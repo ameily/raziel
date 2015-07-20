@@ -10,11 +10,10 @@
       <div class='panel panel-default'>
         <div class='panel-heading'>
           <h2 class='panel-title'>
+            <span class="badge">v<span data-bind='text:version'></span></span>
             <span data-bind="visible: name">
               <span data-bind=" text: name"></span>
-              ::
             </span>
-            v<span data-bind='text:version'></span>
           </h2>
         </div>
         <table class='table'>
@@ -72,44 +71,14 @@
         </table>
       </div>
     </div>
-      <!--
-      <h2>
-        v<span data-bind="text:version"></span>
-      </h2>
-      <table class='table'>
-        <tbody>
-          <tr data-bind="if: name">
-            <th>Name</th>
-            <td data-bind="text: name"></td>
-          </tr>
-          <tr>
-            <th>Size</th>
-            <td data-bind="text: size"></td>
-          </tr>
 
-          <tr>
-            <th>Version</th>
-            <td>
-              <span data-bind="text: version"></span>
-              <span data-bind="text: tag, visible: tag" class='label label-danger'></span>
-            </td>
-          </tr>
-
-          <tr>
-            <th>MD5</th>
-            <td><code data-bind="text: md5"></code></td>
-          </tr>
-          <tr>
-            <th>SHA-1</th>
-            <td><code data-bind="text: sha1"></code></td>
-          </tr>
-          <tr>
-            <th>SHA-256</th>
-            <td><code data-bind="text: sha256"></code></td>
-          </tr>
-        </tbody>
-      </table>
+    <div data-bind="visible: hasMoreItems">
+      <button class='btn btn-default btn-block' data-bind='click: loadMore'>
+        <span class='glyphicon glyphicon-refresh'></span>
+        Load More
+      </button>
     </div>
-  -->
+
+
   </div>
 </div>

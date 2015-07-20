@@ -1,7 +1,5 @@
 ///
 /// TODO fixed position for file summary component
-/// TODO query limits
-/// TODO "Load more" buttons
 /// TODO about and index page
 ///
 
@@ -97,13 +95,15 @@ define([
 
     this.items = ko.observableArray([]);
     this.selectedFile = ko.observable(params.selectedFile || null);
+    this.hasMoreItems = ko.observable(false);
     this.path = new ExplorerLocation();
+    this.limit = 25;
 
     this.path.url.subscribe(function(url) {
       self.update();
     });
 
-    _.bindAll(this, 'gotoTree', 'openFile', 'closeFile', 'update');
+    _.bindAll(this, 'gotoTree', 'openFile', 'closeFile', 'update', 'loadMore');
 
     this.gotoTree(params.url || "/" );
   };
@@ -121,17 +121,31 @@ define([
   };
 
   ExplorerViewModel.prototype.update = function() {
-    var url = this.path.url();
-    var self = this;
     if(this.selectedFile()) {
       this.selectedFile(null);
     }
 
     this.items.removeAll();
-    jsonpipe.flow("/v1" + url + "?f=dir", {
+    this.loadMore();
+  };
+
+  ExplorerViewModel.prototype.loadMore = function() {
+    var url = this.path.url();
+    var self = this;
+    var count = 0;
+    var skip = this.items().length;
+
+    var q = "?f=dir" +
+            "&limit=" + this.limit.toString() +
+            "&skip=" + skip.toString();
+
+    jsonpipe.flow("/v1" + url + q, {
       delimiter: "\n",
       success: function onNode(data) {
         self.items.push(new TreeNode(data, url));
+      },
+      complete: function() {
+        self.hasMoreItems(count == self.limit);
       }
     });
   };
