@@ -17,6 +17,9 @@ var crypto = require('crypto');
 var models = require('./models');
 
 var explorer = require('./routes/explorer');
+var fileRt = require('./routes/file');
+var index = require('./routes/index');
+var docs = require('./routes/docs');
 //var users = require('./routes/users');
 
 var app = express();
@@ -89,9 +92,12 @@ mongoose.connection.once('open', function() {
       gridfs: gridfs
     };
     next();
-  })
-  app.use('/', explorer);
-  //app.use('/users', users);
+  });
+
+  app.use("/", index);
+  app.use("/docs", docs);
+  app.use('/explorer', explorer);
+  app.use("/file", fileRt);
   app.use('/v1', apiV1);
 
   // catch 404 and forward to error handler

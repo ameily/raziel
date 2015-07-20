@@ -1,0 +1,28 @@
+doctype html
+html
+  head
+    block title
+      title Raziel
+    link(rel='stylesheet' href='/vendor/bootstrap/dist/css/bootstrap.css' type='text/css')
+    link(rel='stylesheet' href='/vendor/bootstrap/dist/css/bootstrap-theme.css' type='text/css')
+    script(src="https://code.jquery.com/jquery-1.11.3.js")
+    script(src='/vendor/requirejs/require.js' data-main="/javascripts/main")
+  body
+    nav(class='navbar navbar-default')
+      div(class='container-fluid')
+        div(class='navbar-header')
+          button(class='navbar-toggle collapse' data-toggle='collapse' data-target="#top-navbar")
+            span(class="sr-only") Toggle Navigation
+            span(class="icon-bar")
+            span(class="icon-bar")
+            span(class="icon-bar")
+          a(class="navbar-brand" href='/') Raziel
+        div(class='collapse navbar-collapse' id='top-navbar')
+          ul(class='nav navbar-nav')
+            li
+              a(href="/explorer") Explorer
+            li
+              a(href="/docs") Documentation
+
+    div(class='container-fluid')
+      block content

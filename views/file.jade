@@ -1,14 +1,7 @@
-doctype html
-html
-  head
-    title Raziel - File
-    link(rel='stylesheet' href='/vendor/bootstrap/dist/css/bootstrap.css' type='text/css')
-    link(rel='stylesheet' href='/vendor/bootstrap/dist/css/bootstrap-theme.css' type='text/css')
-    script(src="https://code.jquery.com/jquery-1.11.3.js")
-    script(src='/vendor/requirejs/require.js' data-main="/javascripts/main")
-  body
-    div(class='container-fluid')
-      div(data-bind='component: { name: "raziel-file", params: {url: "#{url}" } }')
-  
+extends ./layout.jade
 
-    
+block title
+  title Raziel - File Viewer
+
+block content
+  div(data-bind='component: { name: "raziel-file", params: { url: "#{url}" } }')

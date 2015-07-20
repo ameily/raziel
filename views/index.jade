@@ -1,0 +1,60 @@
+extends ./layout.jade
+
+block title
+  title Raziel
+
+block content
+  div(class="jumbotron")
+    h1 Raziel
+    p.
+      Raziel is a REST-API based versioned file system that borrows from Git.
+      Files may be uploaded, protected, versioned, tagged, searched, navigated,
+      and downloaded all from a convenient web UI and a REST API.
+    p
+      a(class='btn btn-primary btn-lg' href="/explorer") Start Exploring
+
+  div(class="row")
+    div(class="col-md-12")
+      h2(class="text-center") Features
+
+  div(class="row")
+    div(class="col-md-3")
+      h3(class="text-center")
+        span(class="glyphicon glyphicon-thumbs-up")
+        | &nbsp; Easy to Use
+      p.
+        Raziel is designed to be used both in a web UI and a simple REST API.
+        
+    
+    div(class="col-md-3")
+      h3(class="text-center")
+        span(class="glyphicon glyphicon-share")
+        | &nbsp; Share Everything
+      p.
+        Raziel allows for any user to download any file. No
+        registration. No passwords. No usernames. No emails. Simple and
+        elegant.
+    
+    div(class="col-md-3")
+      h3(class="text-center")
+        span(class="glyphicon glyphicon-lock")
+        | &nbsp; Adaptive &amp; Flexible Security
+      p.
+        Files can be write protected by either an automatically generated
+        API key or an arbitrary password (with no restrictions on
+        complexity). Files are a first-upload-first-owner basis. If you are
+        the first to upload a file at a specific location, then you are the
+        owner of the file and decide if it is write protected.
+
+    div(class="col-md-3")
+      h3(class="text-center")
+        span(class='glyphicon glyphicon-tags')
+        | &nbsp; Permalinks
+      p
+        | A Raziel file will always be accessed from the same URL. Files
+        | are automatically versioned and can be tagged, just like Git. This
+        | allows for symbolic files, such as
+        | <code>/project/releases/latest</code> or
+        | <code>/project/builds/nightly</code> that get updated frequently.
+        | Each change to a file creates a new version, and each version
+        | of the file's content can be retrieved via the web UI or REST API.

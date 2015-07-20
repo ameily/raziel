@@ -3,6 +3,7 @@ var _ = require('underscore');
 
 var router = express.Router();
 
+
 function cleanUrl(url) {
   var parts = url.split('/');
   var url = "";
@@ -22,10 +23,9 @@ function cleanUrl(url) {
   return url;
 }
 
-router.get('*', function(req, res, next) {
-  //var url = req.path.substring("/explorer".length);
+router.get("*", function(req, res, next) {
   var url = req.path;
-  res.render('explorer', { url: cleanUrl(url) });
+  res.render('file', { url: cleanUrl(url) });
 });
 
 module.exports = router;
