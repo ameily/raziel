@@ -11,31 +11,31 @@ file system with similar concepts as Git.
 ## File [/v1/files/{+url}]
 
 + Parameters
-  + url (string) - File storage location.
+    + url (string) - File storage location.
 
 + Attributes
-  + url (string, required) - File storage location.
-  + namespace (string, required) - File namespace (the dirname of the url).
-  + name (string, required) - The file name.
-  + tag (string) - Symbolic tag name for this version.
-  + size (number, required) - The file size, in bytes.
-  + timestamp (number, required) - The unix timestamp when the file version was uploaded.
-  + version (number, required) - The file version.
-  + downloads (number, required) - The number of downloads.
-  + lastDownload (number) - THe unix timestamp when the file was last downloaded.
-  + md5 (string, required) - The file's MD5 hash.
-  + sha1 (string, required) - The file's SHA-1 hash.
-  + sha256 (string, required) - The file's SHA-256 hash.
-  + apiKey (string, optional) - The write-protect API key. This attribute is only available when the file is first uploaded and the `protect` attribute is set to "true". Otherwise, the `apiKey` attribute will not be present.
+    + url (string, required) - File storage location.
+    + namespace (string, required) - File namespace (the dirname of the url).
+    + name (string, required) - The file name.
+    + tag (string) - Symbolic tag name for this version.
+    + size (number, required) - The file size, in bytes.
+    + timestamp (number, required) - The unix timestamp when the file version was uploaded.
+    + version (number, required) - The file version.
+    + downloads (number, required) - The number of downloads.
+    + lastDownload (number) - THe unix timestamp when the file was last downloaded.
+    + md5 (string, required) - The file's MD5 hash.
+    + sha1 (string, required) - The file's SHA-1 hash.
+    + sha256 (string, required) - The file's SHA-256 hash.
+    + apiKey (string, optional) - The write-protect API key. This attribute is only available when the file is first uploaded and the `protect` attribute is set to "true". Otherwise, the `apiKey` attribute will not be present.
 
 ### Upload a File [POST]
 
 + Attributes
-  + file (required) - File content.
-  + name (string) - Specific file name. If not specified, the upload file's original name is used.
-  + tag (string) - Symbolic tag for the new file version.
-  + apiKey (string) - If the file is new, write-protect the new file with the specified API key. If the file is not new, the specified API key must match the existing file's.
-  + protect (boolean) - Whether to generate a write-protect API key for the new file. Accepts either "true" or "false".
+    + file (required) - File content.
+    + name (string) - Specific file name. If not specified, the upload file's original name is used.
+    + tag (string) - Symbolic tag for the new file version.
+    + apiKey (string) - If the file is new, write-protect the new file with the specified API key. If the file is not new, the specified API key must match the existing file's.
+    + protect (boolean) - Whether to generate a write-protect API key for the new file. Accepts either "true" or "false".
 
 
 + Request Upload File (multipart/form-data)
@@ -43,14 +43,104 @@ file system with similar concepts as Git.
 
 + Response 200 (application/json)
 
-  File was successfully saved.
+    File was successfully saved.
 
-  + Attributes (File)
+    + Attributes (File)
+
+    + Body
+
+            {
+                "downloads": 0,
+                "lastDownload", 0,
+                "md5": "8d0f0108005c55a136f0deb6e1d5f82d",
+                "mimetype": "application/x-gzip",
+                "name": null,
+                "namespace": "/my-project/releases",
+                "sha1": "2111e97593b2e9dcba506e78f91a06a2322975f6",
+                "sha256": "b60bddc102fffd52cf8dbdab8662489829cdce2109cf1f22bd595ab1a63a8660",
+                "size": 3902,
+                "tag": null,
+                "timestamp": 1436838661,
+                "url": "/my-project/releases/latest",
+                "version": 1
+            }
 
 
 + Response 401 (application/json)
 
-  Access denied; The file already exists and is protected by an API key and the request's API Key did not match.
+    Access denied; The file already exists and is protected by an API key and the request API Key did not match.
 
-  + Attributes
-      + error (string) - The error message.
+    + Attributes
+        + error (string) - The error message.
+
+    + Body
+
+            { "error": "file is protected by api key" }
+
+
+### Retrieve a File [GET]
+
++ Attributes
+    + version (number) - The specific version to download.
+    + tag (string) - The specific tag to download.
+
++ Request Download Latest Version (application/json)
+
+    Without specifying a request body, the latest version of the file will be downloaded.
+
+    + Body
+    
+            { }
+
++ Response 200
+
+    + Headers
+
+            Content-Type: file.mimetype
+            Content-Length: file.size
+            Content-Disposition: attachment; name=file.name
+
+
+## History [/v1/history/{+url}]
+
+A specific file's history can be retrieved, showing all previous version. The
+response body will be newline separated JSON objects, of type File. Versions are
+returned in reverse order, so that the first version retrieved will be the
+latest.
+
+### Retrieve History [GET]
+
++ Attributes
+    + limit (number) - The maximum number of versions to retrieve.
+    + skip (number) - The offset of the first version to retrieve.
+
+
++ Request (application/json)
+
+    + Body
+
+            {
+                "limit": 10,
+                "skip": 0
+            }
+
+
++ Response 200 (application/json)
+
+    + Attributes (File)
+
+    + Body
+
+            { "url": "/my-project/releases/latest", "version": 6, "size": 2094, ... }
+            { "url": "/my-project/releases/latest", "version": 5, "size": 1074, ... }
+
+
++ Response 404 (application/json)
+    No file exists at the provided URL.
+
+    + Attributes
+        + error (string) - THe error message.
+
+    + Body
+
+            { "error": "file not found" }
