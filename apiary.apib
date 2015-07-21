@@ -1,0 +1,56 @@
+FORMAT: 1A
+
+
+# Raziel
+
+Raziel is a flexible REST API and web interface that implements a basic versioning
+file system with similar concepts as Git.
+
+# Group Collections
+
+## File [/v1/files/{+url}]
+
++ Parameters
+  + url (string) - File storage location.
+
++ Attributes
+  + url (string, required) - File storage location.
+  + namespace (string, required) - File namespace (the dirname of the url).
+  + name (string, required) - The file name.
+  + tag (string) - Symbolic tag name for this version.
+  + size (number, required) - The file size, in bytes.
+  + timestamp (number, required) - The unix timestamp when the file version was uploaded.
+  + version (number, required) - The file version.
+  + downloads (number, required) - The number of downloads.
+  + lastDownload (number) - THe unix timestamp when the file was last downloaded.
+  + md5 (string, required) - The file's MD5 hash.
+  + sha1 (string, required) - The file's SHA-1 hash.
+  + sha256 (string, required) - The file's SHA-256 hash.
+  + apiKey (string, optional) - The write-protect API key. This attribute is only available when the file is first uploaded and the `protect` attribute is set to "true". Otherwise, the `apiKey` attribute will not be present.
+
+### Upload a File [POST]
+
++ Attributes
+  + file (required) - File content.
+  + name (string) - Specific file name. If not specified, the upload file's original name is used.
+  + tag (string) - Symbolic tag for the new file version.
+  + apiKey (string) - If the file is new, write-protect the new file with the specified API key. If the file is not new, the specified API key must match the existing file's.
+  + protect (boolean) - Whether to generate a write-protect API key for the new file. Accepts either "true" or "false".
+
+
++ Request Upload File (multipart/form-data)
+
+
++ Response 200 (application/json)
+
+  File was successfully saved.
+
+  + Attributes (File)
+
+
++ Response 401 (application/json)
+
+  Access denied; The file already exists and is protected by an API key and the request's API Key did not match.
+
+  + Attributes
+      + error (string) - The error message.
