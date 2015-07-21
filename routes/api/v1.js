@@ -268,10 +268,18 @@ router.post("*", function(req, res) {
 
     if(prev == null) {
       // This is a new file descriptor.
+      var protect = false;
+      if(req.body.protect) {
+        if(_.isBoolean(req.body.protect)) {
+          protect = req.body.protect;
+        } else if(_.isString(req.body.protect)) {
+          protect = req.body.protect.toLowerCase() == "true";
+        }
+      }
 
       models.TreeDescriptor.addFile(file);
 
-      if(!apiKey && req.body.protect === true) {
+      if(!apiKey && protect) {
         // generate API key
         clearApiKey = file.generateApiKey();
         logger.debug("generated api key for file: %s", url, file.version);
