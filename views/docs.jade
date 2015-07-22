@@ -12,7 +12,7 @@ block content
     div(class='col-md-10')
       h2 Background
       p
-        | Raziel is a REST API and web service that implements a basic versioned file
+        | Raziel is a REST API and web service that implements a basic versioning file
         | system. There are not directories in the traditional sense, instead files can
         | be uploaded to arbitrary URLs. Files are versioned automatically and specific
         | versions can be tagged, similar to Git. Specific file versions or tags can be
@@ -39,190 +39,22 @@ block content
         | simple web UI, that mimics a traditional file browser application, for
         | non-technical team members.
 
-      h2 Resources
-      
-      h3 File Descriptor
+      h2 API Documentation
       
       p
-        | File Descriptor objects are returned from the <code>/v1/files</code>
-        | endpoint. 
+        | Offical documentation for the Raziel REST API is available on Apiary:
+        | <a href="http://docs.raziel.apiary.io/" target='_blank'>http://docs.raziel.apiary.io/</a>.
       
-      table(class='table')
-        thead
-          tr
-            th Field
-            th Type
-            th Description
-        tbody
-          tr
-            td
-              code url
-            td string
-            td The path URL to the file.
-          tr
-            td
-              code namespace
-            td string
-            td The URL namespace.
-          tr
-            td
-              code name
-            td string
-            td The file name.
-          tr
-            td
-              code size
-            td integer
-            td The file size, in bytes.
-          tr
-            td
-              code tag
-            td string
-            td The version tag, if any is set.
-          tr
-            td
-              code version
-            td integer
-            td The version number. This is managed by Raziel.
-          tr
-            td
-              code timestamp
-            td integer
-            td The unix timestamp that the file was uploaded.
-          tr
-            td
-              code downloads
-            td integer
-            td The number of downloads.
-          tr
-            td
-              code lastDownload
-            td integer
-            td The unix timestamp of the last download.
-          tr
-            td
-              code mimetype
-            td string
-            td The mimetype of the file.
-          tr
-            td
-              code md5
-            td string
-            td The file's MD5 hash.
-          tr
-            td
-              code sha1
-            td string
-            td The file's SHA-1 hash.
-          tr
-            td
-              code sha256
-            td string
-            td The file's SHA-256 hash.
-          tr
-            td
-              code apiKey
-            td string
-            td
-              | The file's write-protection API key. This is only specified in a 
-              | file descriptor if: 1) the file was upload, 2) the file URL was unique,
-              | and 3) the <code>protect</code> field was set to <code>"true"</code>.
-      
-      h4 File Descriptor JSON Example
-      
-      pre
-        | {
-        |   "url": "/my-project/releases/latest",
-        |   "namespace": "/my-project/releases",
-        |   "name": "release.tar.gz",
-        |   "version": 2,
-        |   "size": 3809,
-        |   "timestamp": 1436838661,
-        |   "tag": null,
-        |   "downloads": 0,
-        |   "lastDownload": 0,
-        |   "mimetype": "application/x-gzip",
-        |   "md5": "8d0f0108005c55a136f0deb6e1d5f82d",
-        |   "sha1": "2111e97593b2e9dcba506e78f91a06a2322975f6",
-        |   "sha256": "b60bddc102fffd52cf8dbdab8662489829cdce2109cf1f22bd595ab1a63a8660"
-        | }
-      
-      h3 Tree Descriptor
-      
-      h4 Tree Descriptor JSON Example
-
-      h2 REST API
-
-      p
-        | The current version of the REST API can be accessed at the <code>/v1</code> endpoint. File
-        | urls are specified within the URL itself. For example, to access the file
-        | <code>/test/file.txt</code>, the REST API enpoint would be <code>/v1/test/file.txt</code>.
-      
-      h3 Uploading a File
+      h2 Examples
       
       p
-        | Performing a <code>POST</code> request to a URL will upload a file. The
-        | request must be <code>multipart/form-data</code>. The
-        | following table describes parameters that are accepted in the request.
+        | The following example use the <a href="https://github.com/jkbrzt/httpie">httpie</a>
+        | tool to interact with the REST API. httpie is user- and JSON-friendly.
       
-      table(class='table')
-        thead
-          tr
-            th Field
-            th Type
-            th Required
-            th Description
-        tbody
-          tr
-            td
-              code file
-            td binary
-            td Yes
-            td The file's content.
-          tr
-            td
-              code name
-            td string
-            td No
-            td
-              | The file name. This is the name that is used when the file is downloaded.
-              | If not specified, the file's original name is used.
-          tr
-            td
-              code tag
-            td string
-            td No
-            td
-              | The file tag to name the new file version. Similar to a Git tag,
-              | this is a symbolic name that can be referenced when downloading
-              | the file.
-          tr
-            td
-              code apiKey
-            td string
-            td No
-            td
-              | The API key to use to write-protect the file. If the file already
-              | exists, the API key must match the one originally specified when the
-              | file was first uploaded.
-          tr
-            td
-              code protect
-            td boolean
-            td No
-            td
-              | Whether to protect the new file with an automatically generated
-              | API key. If this field is set to <code>"true"</code>, then the JSON response
-              | will contain an <code>apiKey</code> field that holds the API key generated
-              | to protect the file. <strong>The <code>protect</code> and <code>apiKey</code>
-              | fields cannot be specified together.</strong>
       
-      h4 Example: Upload Latest Release
+      h3 Uploading Files
       
-      p
-        | Using <a href="https://github.com/jkbrzt/httpie">httpie</a>, the following
-        | command uploads the file <code>./release.tar.gz</code> to the URL
-        | <code>/my-project/releases/latest</code>.
+      h4 Upload Latest Release
       
       pre
         | $ http --form POST http://localhost:3000/v1/my-project/releases/latest \
@@ -238,6 +70,8 @@ block content
         | which isn't descriptive. This, we will set the name of the file on upload so that
         | when the file is downloaded, the file name is more desciptive.
       
+      h4 Upload with an Explicit File Name
+      
       pre
         | $ http --form POST http://localhost:3000/v1/my-project/releases/latest \
         |        file@./release.tar.gz \
@@ -246,10 +80,7 @@ block content
       p
         | Now, when the file is downloaded, it will be saved to <code>./MyProject-1.2.tar.gz</code>.
       
-      p
-        | Finally, it would be nice if the file was tagged as release 1.2, so that
-        | it can be specificly downloaded later by the tag name and not the version
-        | number, which is managed by Raziel.
+      h4 Upload with an Explicit Name and Tag
       
       pre
         | $ http --form POST http://localhost:3000/v1/my-project/releases/latest \
@@ -257,7 +88,7 @@ block content
         |        name=MyProject-1.2.tar.gz \
         |        tag=v1.2
       
-      h4 Example: Upload a New Write-Protected File
+      h4 Upload a New Write-Protected File
       
       p
         | In this example, the file <code>./song.mp3</code> is uploaded to 
@@ -270,10 +101,18 @@ block content
         |        file@./song.mp3 \
         |        protect=true
       
-      h2 Resource: Files
+      p
+        | The returned JSON object will contain an <code>apiKey</code> attribute
+        | that holds the write-protection key required to modify the file.
+      
+      h4 Upload am Existing Write-Protected File
+      
+      pre
+        | $ http --form POST http://localhost:3000/v1/band/album/song.mp3 \
+        |        file@./song-2.mp3 \
+        |        apiKey=55a46b05143bce572b0f523c
       
       p
-        | File JSON objects are returned from upload requests and from file queries.
-        | They have the following fields:
-      
-      
+        | The specified API key must match the API key specified when the file was
+        | first uploaded or, if the file was uploaded with `protect=true`, the API
+        | Key returned by the server after initial upload.
