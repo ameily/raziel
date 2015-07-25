@@ -4,7 +4,11 @@ FORMAT: 1A
 # Raziel
 
 Raziel is a flexible REST API and web interface that implements a basic versioning
-file system with similar concepts as Git.
+file system with similar concepts as Git. Each endpoint, `/files`, `/history`,
+and `/trees` all take a file within the URL itself and the URLs are shared across
+all endpoints. FOr example, uploading a file to `/files/my-project/test_file.txt`,
+its history can be retrieved from `/history/my-project/test_file.txt`, and its
+parent tree can be listed from `/trees/my-project`.
 
 # Group Collections
 
@@ -38,7 +42,17 @@ file system with similar concepts as Git.
     + protect (boolean) - Whether to generate a write-protect API key for the new file. Accepts either "true" or "false".
 
 
-+ Request Upload File (multipart/form-data)
++ Request Upload File (multipart/form-data; boundary=AaB03x)
+
+    + Body
+
+            --AaB03x
+            Content-Disposition: form-data; name="file"; filename="file1.gz"
+            Content-Type: application/x-gzip
+            Content-Transfer-Encoding: binary
+
+            <Content of local file file1.gz>
+            --AaB03x
 
 
 + Response 200 (application/json)
@@ -77,20 +91,62 @@ file system with similar concepts as Git.
 
             { "error": "file is protected by api key" }
 
++ Request Write-protect new file with an automatically generated API Key. (multipart/form-data; boundary=AaB03x)
+
+    + Body
+
+            --AaB03x
+            Content-Disposition: form-data; name="file"; filename="file1.gz"
+            Content-Type: application/x-gzip
+            Content-Transfer-Encoding: binary
+
+            <Content of local file file1.gz>
+            --AaB03x
+            Content-Disposition: form-data; name="protect"
+            Content-Type: text/plain
+
+            true
+            --AaB03x
+
+
++ Response 200 (application/json)
+
+    The file is now write-protected with the API Key that is included in the response body.
+
+    + Body
+
+            {
+                "downloads": 0,
+                "lastDownload", 0,
+                "md5": "8d0f0108005c55a136f0deb6e1d5f82d",
+                "mimetype": "application/x-gzip",
+                "name": null,
+                "namespace": "/my-project/releases",
+                "sha1": "2111e97593b2e9dcba506e78f91a06a2322975f6",
+                "sha256": "b60bddc102fffd52cf8dbdab8662489829cdce2109cf1f22bd595ab1a63a8660",
+                "size": 3902,
+                "tag": null,
+                "timestamp": 1436838661,
+                "url": "/my-project/releases/latest",
+                "version": 1,
+                "apiKey": "55a9c68fe0f4e26653169c27"
+            }
+
 
 ### Retrieve a File [GET]
 
+A file's content or its metadata can be retrieved from the same
+endpoint. What is returned by the server is determined by the `format` attribute
+in requests. If `format` is not specified, the file's content is retrieved. The
+"stat" format will return the file's metadata.
+
 + Attributes
-    + version (number) - The specific version to download.
-    + tag (string) - The specific tag to download.
+    + version (number, optional) - The specific version to download.
+    + tag (string, optional) - The specific tag to download.
+    + format (string, optional) - The download format; currently can only be "stat".
 
 + Request Download Latest Version (application/json)
 
-    Without specifying a request body, the latest version of the file will be downloaded.
-
-    + Body
-    
-            { }
 
 + Response 200
 
@@ -100,10 +156,37 @@ file system with similar concepts as Git.
             Content-Length: file.size
             Content-Disposition: attachment; name=file.name
 
++ Request Retrieve File Metadata for a Specific Version (application/json)
+
+    + Body
+
+            { "format": "stat", "version": 5 }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "downloads": 0,
+                "lastDownload", 0,
+                "md5": "8d0f0108005c55a136f0deb6e1d5f82d",
+                "mimetype": "application/x-gzip",
+                "name": null,
+                "namespace": "/my-project/releases",
+                "sha1": "2111e97593b2e9dcba506e78f91a06a2322975f6",
+                "sha256": "b60bddc102fffd52cf8dbdab8662489829cdce2109cf1f22bd595ab1a63a8660",
+                "size": 3902,
+                "tag": null,
+                "timestamp": 1436838661,
+                "url": "/my-project/releases/latest",
+                "version": 5
+            }
+
+
 
 ## History [/v1/history/{+url}]
 
-A specific file's history can be retrieved, showing all previous version. The
+A specific file's history can be retrieved, showing all previous versions. The
 response body will be newline separated JSON objects, of type File. Versions are
 returned in reverse order, so that the first version retrieved will be the
 latest.
@@ -111,18 +194,11 @@ latest.
 ### Retrieve History [GET]
 
 + Attributes
-    + limit (number) - The maximum number of versions to retrieve.
-    + skip (number) - The offset of the first version to retrieve.
+    + limit (number, optional) - The maximum number of versions to retrieve.
+    + skip (number, optional) - The offset of the first version to retrieve.
 
 
 + Request (application/json)
-
-    + Body
-
-            {
-                "limit": 10,
-                "skip": 0
-            }
 
 
 + Response 200 (application/json)
@@ -131,8 +207,9 @@ latest.
 
     + Body
 
-            { "url": "/my-project/releases/latest", "version": 6, "size": 2094, ... }
-            { "url": "/my-project/releases/latest", "version": 5, "size": 1074, ... }
+            { "url" : "/my-project/releases/latest", "namespace" : "/my-project/releases", "version" : 1, "name" : "MyProject-1.2.zip", "downloads" : 0, "lastDownload" : 0, "mimetype" : "application/z-gzip", "tag" : "1.2", "size" : 8776845, "md5" : "9e16c6837fbcd8c7cf38a1a450b96bc6", "sha1" : "fc560122c71f6c207996c7d10133d4d77b2aed56", "sha256" : "967494c3d6de1d7a1d3aa1327aeaafeb2fa06bc40071668227be12a7313fee63" }
+            { "url" : "/my-project/releases/latest", "namespace" : "/my-project/releases", "version" : 0, "name" : "release.tar.gz", "downloads" : 9, "lastDownload" : 1437178306, "mimetype" : "application/x-gzip", "tag" : null, "size" : 3270, "md5" : "8d0f0108005c55a136f0deb6e1d5f82d", "sha1" : "2111e97593b2e9dcba506e78f91a06a2322975f6", "sha256" : "b60bddc102fffd52cf8dbdab8662489829cdce2109cf1f22bd595ab1a63a8660" }
+
 
 
 + Response 404 (application/json)
@@ -144,3 +221,44 @@ latest.
     + Body
 
             { "error": "file not found" }
+
+
+## Tree [/v1/trees/{+url}]
+
+Trees are a loose-form directory structure around uploaded files. Each uploaded
+file's URL is parsed and tree nodes are created for each unque path. Each file's
+`namespace` attribute matches a tree's `namespace` attribute and using the two
+together, listing a namespace will return the list of sub-trees and sub-files.
+
+For example, if a file is uploaded to `/my-project/releases/latest`, tree nodes
+are created for the following paths: `/my-project`, `/my-project/releases`,
+`/my-project/releases/latest`. Listing the tree `/my-project` will return the
+single tree node `releases`, which then, in turn, can be listed to retrieve
+the `latest` node.
+
+A tree's `type` attribute holds whether the tree points to another tree or a
+file, which can be quired in the Files collection.
+
++ Parameters
+    + url (string) - Tree location.
+
++ Attributes
+    + name (string) - Node name.
+    + type (string) - Node type, either "tree" or "file".
+
+### Retrieve Tree Listing [GET]
+
+Responses are a list of newline separated JSON Tree objects.
+
++ Request (application/json)
+    + Attributes
+        + limit (number, optional) - Maximum number of objects to retrieve.
+        + skip (number, optional) - Index of the first Tree object to retrieve.
+
+
++ Response 200 (application/json)
+    + Body
+
+            { "name": "my-project", "type": "tree" }
+            { "name": "other-project", "type": "tree" }
+            { "name": "test_file.txt", "type": "file" }
