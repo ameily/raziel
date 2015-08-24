@@ -4,6 +4,9 @@
 
 var express = require('express');
 var router = express.Router();
+var trees = express.Router();
+var history = express.Router();
+var files = express.Router();
 var models = require('../../models');
 var util = require('util');
 var _ = require('underscore');
@@ -99,26 +102,56 @@ function cleanUrl(url) {
   return url;
 }
 
-///
-/// Download a file or its metadata, based on the format query parameter.
-///
-router.get("*", function(req, res) {
-  var format = req.query.f || req.body.f || null;
-  if(!_.isString(format)) {
-    format = null;
+
+
+trees.get('*', function(req, res) {
+  var namespace = cleanUrl(req.path);
+  var limit = req.query.limit || req.body.limit || null;
+  var skip = req.query.skip || req.body.skip || null;
+  var cursor = models.TreeDescriptor.find({ namespace: namespace }).sort({ name: 1 });
+
+  if(_.isNumber(limit)) {
+    cursor = cursor.limit(limit);
   }
 
+  if(_.isNumber(skip)) {
+    cursor = cursor.skip(skip);
+  }
+
+  cursor.stream({
+    transform: function(doc) {
+      return JSON.stringify(doc.toClient()) + "\n";
+    }
+  }).pipe(res);
+
+  return;
+});
+
+
+/*
+router.get('/trees/*', function(req, res) {
   if(format == 'history') {
     return streamHistory(req, res);
   } else if(format == 'dir') {
     return streamDirListing(req, res);
+  }
+});
+*/
+
+///
+/// Download a file or its metadata, based on the format query parameter.
+///
+files.get("*", function(req, res) {
+  var format = req.query.format || req.body.format || null;
+  if(!_.isString(format)) {
+    format = null;
   }
 
   getFileDescriptor(req, function(err, file) {
     if(err) {
       // the quiery was invalid if an error occurred
       logger.info("invalid query for file %s: %s", req.path, err.toString());
-      res.status(404).json({ error: "invalid query: " + err.toString()});
+      res.status(400).json({ error: "invalid query: " + err.toString()});
     } else if(file == null) {
       // the file wasn't found based on the query
       logger.info("file not found: %s", req.path);
@@ -159,7 +192,7 @@ router.get("*", function(req, res) {
   });
 });
 
-function streamHistory(req, res) {
+history.get('*', function (req, res) {
   var cursor = models.FileDescriptor.find({ url: cleanUrl(req.path) }).sort({ _id: -1 });
   var limit = parseInt(req.query.limit || req.body.limit || null);
   var skip = parseInt(req.query.skip || req.body.skip || null);
@@ -179,30 +212,11 @@ function streamHistory(req, res) {
   }).pipe(res);
 
   return;
-}
+});
 
-function streamDirListing(req, res) {
-  var namespace = cleanUrl(req.path);
-  var limit = req.query.limit || req.body.limit || null;
-  var skip = req.query.skip || req.body.skip || null;
-  var cursor = models.TreeDescriptor.find({ namespace: namespace }).sort({ name: 1 });
-
-  if(_.isNumber(limit)) {
-    cursor = cursor.limit(limit);
-  }
-
-  if(_.isNumber(skip)) {
-    cursor = cursor.skip(skip);
-  }
-
-  cursor.stream({
-    transform: function(doc) {
-      return JSON.stringify(doc.toClient()) + "\n";
-    }
-  }).pipe(res);
-
-  return;
-}
+router.use('/trees', trees);
+router.use('/history', history);
+router.use('/files', files);
 
 
 ///
@@ -218,7 +232,7 @@ function streamDirListing(req, res) {
 /// else
 ///   create new file
 ///
-router.post("*", function(req, res) {
+files.post("*", function(req, res) {
   var url = cleanUrl(req.path);
 
   if(url.length <= 1) {
@@ -253,7 +267,7 @@ router.post("*", function(req, res) {
       url: url,
       namespace: path.dirname(url),
       version: 1,
-      name: req.body.name || upload.originalname || null,
+      name: req.body.name || upload.originalname || path.basename(url) || "",
       gfsId: null,
       apiKey: null,
       downloads: 0,
@@ -354,19 +368,131 @@ router.post("*", function(req, res) {
 });
 
 
+///
+/// Make a symlink.
+///
+files.put('*', function(req, res) {
+  var url = cleanUrl(req.path);
+  // target file url
+  var targetUrl = req.body.target;
+  // target file version
+  var version = null;
+  // what to do, only symlink supported
+  var action = req.body.action;
+  // use api key
+  var apiKey = req.body.apiKey;
+  // query for link and target files
+  var qLink, qTarget;
+  // if the file is new, protect it or not
+  var protect = req.body.protect;
+  // if protect = true and apiKey = false and the file doesn't exist, this var
+  // will hold the generated api key in clear text.
+  var clearApiKey;
+
+  if(url.length <= 1) {
+    // the root is not a valid file
+    logger.info("put: invalid/missing url");
+    res.status(404).json({ error: "no file path specified" });
+    return;
+  }
+
+  if(action != 'symlink') {
+    logger.info("put: invalid action");
+    res.status(400).json({ error: "invalid action: " + symlink });
+    return;
+  }
+
+  if(!_.isString(targetUrl)) {
+    logger.info("put: invalid target url");
+    res.status(400).json({ error: "invalid target url" });
+    return
+  }
+
+  qLink = { url: url };
+  qTarget = { url: targetUrl };
+
+  // validate the version number
+  if(!_.isUndefined(req.body.version)) {
+    version = parseInt(req.body.version);
+    if(_.isNaN(version)) {
+      logger.info("put: invalid target version");
+      res.status(400).json({ error: "invalid version" });
+      return;
+    } else {
+      // version number is valid
+      qTarget.version = version;
+    }
+  }
+
+  // first, retrieve the link file
+  models.FileDescriptor.findOne(qLink).sort({ _id: -1 }).exec(function(err, link) {
+    if(err) {
+      // the quiery was invalid if an error occurred
+      logger.info("invalid query for link %s: %s", url, err.toString());
+      res.status(400).json({ error: "invalid link query: " + err.toString()});
+      return;
+    }
+
+    if(link) {
+      if(link.apiKey && !link.apiKeyMatches(apiKey)) {
+        // file is API key protected and api key doesn't match
+        logger.info("unauthorized upload to %s", url);
+        res.status(401).json({ error: "link file is protected by api key" });
+        return;
+      }
+    }
+
+    // We found the link, find the target
+    models.FileDescriptor.findOne(qTarget).sort({ _id: -1 }).exec(function(errT, target) {
+      if(errT) {
+        // the quiery was invalid if an error occurred
+        logger.info("invalid query for target %s: %s", targetUrl, errT.toString());
+        res.status(400).json({ error: "invalid target query: " + errT.toString()});
+        return;
+      }
+
+      if(!target) {
+        logger.info("target not found: %s v%s", targetUrl, version);
+        res.status(404).json({ error: "target file not found" });
+        return;
+      }
+
+      // We have link and we have target
+      link = target.mklink({
+        url: url,
+        namespace: path.dirname(url),
+        version: link ? link.version + 1 : 1
+      });
+
+      if(apiKey) {
+        link.setApiKey(apiKey);
+      } else if(protect) {
+        clearApiKey = link.generateApiKey();
+      }
+
+      link.save(function(saveErr) {
+        if(saveErr) {
+          logger.error("failed to save link %s => %s[v%d]: %s", url, targetUrl,
+                       version, saveErr);
+          res.status(500).json({
+            error: "failed to save link: " + saveErr.toString()
+          });
+        } else {
+          var json = link.toClient();
+          if(clearApiKey) {
+            json.apiKey = clearApiKey;
+          }
+
+          models.TreeDescriptor.addFile(link);
+
+          logger.info("created link: %s[%d] => %s[v%d]", url, link.version,
+                      target.url, target.version);
+          res.status(200).json(link);
+        }
+      });
+    });
+  });
+});
+
+
 module.exports = router;
-
-
-/*
-
-metasponse/
-  relase.zip | tags: [1.4.3, 1.4.2, 1.4.1]
-  releases/
-    latest.zip
-    metasponse-1.4.3.zip
-  libs.zip | tags: [1.4.3, 1.4.2, 1.4.1]
-  builtins.zip | tags: [1.4.3, 1.4.2, 1.4.1]
-
-
-
-*/
