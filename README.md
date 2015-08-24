@@ -14,3 +14,14 @@ specified do not have to meet any requirements.
 Trees allow for loose-form directories around uploaded files.
 
 REST API documentation is available on Apiary: http://docs.raziel.apiary.io/.
+
+## Use Cases
+
+ * Nightly build server
+   * `/project/myproject/builds/nightly` - `{ tag: "2015-08-23" }`
+ * Source repository backup nightly, weekly, monthly, etc.
+   * `/project/myproject/backups` - `{ tag: "2015-08" }`
+ * Release server
+   * `/project/myproject/releases` - `{ tag: "v1.4.3" }`
+ * Generic file server
+   * `/users/meilya/.bashrc`
