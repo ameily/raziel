@@ -67,7 +67,28 @@ FileDescriptorSchema.methods.setApiKey = function(apiKey) {
   var sha1 = crypto.createHash('sha1');
   sha1.update(apiKey.toString());
   this.apiKey = sha1.digest('hex');
-}
+};
+
+FileDescriptorSchema.methods.mklink = function(params) {
+  var link = new FileDescriptor({
+    url: params.url,
+    version: params.version || 1,
+    namespace: params.namespace,
+    apiKey: params.apiKey || null,
+    tag: this.tag,
+    downloads: 0,
+    name: this.name,
+    lastDownload: 0,
+    mimetype: this.mimetype,
+    size: this.size,
+    md5: this.md5,
+    sha1: this.sha1,
+    sha256: this.sha256,
+    gfsId: this.gfsId
+  });
+
+  return link;
+};
 
 var FileDescriptor = mongoose.model('File', FileDescriptorSchema);
 
