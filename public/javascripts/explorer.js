@@ -135,11 +135,10 @@ define([
     var count = 0;
     var skip = this.items().length;
 
-    var q = "?f=dir" +
-            "&limit=" + this.limit.toString() +
+    var q = "?limit=" + this.limit.toString() +
             "&skip=" + skip.toString();
 
-    jsonpipe.flow("/v1" + url + q, {
+    jsonpipe.flow("/v1/trees" + url + q, {
       delimiter: "\n",
       success: function onNode(data) {
         self.items.push(new TreeNode(data, url));
@@ -159,7 +158,7 @@ define([
 
     file.selected(true);
 
-    $.getJSON("/v1" + file.url + "?f=stat", function(data) {
+    $.getJSON("/v1/files" + file.url + "?format=stat", function(data) {
       file.latest = new FileDescriptor(data);
       //file.latest.downloadUrl = "/v1" + file.url;
       //file.latest.infoUrl = "/file" + file.url;

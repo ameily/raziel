@@ -19,8 +19,8 @@ define([
 
     this.size = humanizeFileSize(params.size || 0);
 
-    this.downloadUrl = "/v1" + this.url + "?version=" + this.version.toString();
-    this.infoUrl = "/file" + this.url;
+    this.downloadUrl = "/v1/files" + this.url + "?version=" + this.version.toString();
+    this.infoUrl = "/files" + this.url;
   }
 
   function TreeNode(params, cwd) {

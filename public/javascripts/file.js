@@ -17,12 +17,11 @@ define([
   FileViewModel.prototype.loadMore = function() {
     var self = this;
     var skip = this.history().length;
-    var q = "?f=history" +
-            "&limit=" + this.limit.toString() +
+    var q = "?limit=" + this.limit.toString() +
             "&skip=" + skip.toString();
     var count = 0;
 
-    jsonpipe.flow("/v1" + this.url() + q, {
+    jsonpipe.flow("/v1/history" + this.url() + q, {
       delimiter: "\n",
       success: function onItem(data) {
         self.history.push(new models.FileDescriptor(data));
