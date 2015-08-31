@@ -332,7 +332,7 @@ files.post("*", function(req, res) {
 
     if(upload.dbFile) {
       // The already exists in the database
-      file.gfsId = upload.dbFile._id;
+      file.gfsId = upload.dbFile.gfsId;
       logger.info("duplicate file content found: %s [%d]", url, file.version);
 
       fs.unlink(upload.path, function() {
