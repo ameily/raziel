@@ -72,6 +72,8 @@ class RazielFile(object):
         self.mimetype = data['mimetype']
         self.size = data['size']
 
+        self.api_key = data.get('apiKey', None)
+
     def write(self, stream=None, level=None):
         stream = stream or sys.stdout
         level = level or 'full'
@@ -127,185 +129,202 @@ class TreeListing(object):
             print('\n'.join(self.leafs), file=stream)
 
 
-def normalize_url(args):
-    host = args.url
-    path = args.path
-
-    if not host.startswith('http'):
-        host = "http://" + host
-
-    if host.endswith('/'):
-        host = host[:-1]
-
-    if path.startswith('/'):
-        path = path[1:]
-
-    if args.upload or args.stat or args.download:
-        action = 'files'
-    elif args.history:
-        action = 'history'
-    elif args.list:
-        action = 'trees'
-
-    url = "{host}/v1/{action}/{path}".format(
-        host=host,
-        action=action,
-        path=path
-    )
-
-    return url
 
 
 
-def upload_file(url, path, api_key=None, tag=None, name=None, protect=False):
-    try:
-        fp = open(path, 'rb')
-    except OSError as e:
-        print("raziel: cannot access ", path, ": ", e.strerror)
-        return -e.errno
+class RazielClient(object):
 
-    body = {'file': fp}
-    if api_key:
-        body['apiKey'] = api_key
-    elif protect:
-        body['protect'] = True
+    def __init__(self, server, ssl=False):
+        self.server = server
+        self.ssl = ssl
 
-    if tag:
-        body['tag'] = tag
+        if server.startswith("http://") or server.startswith("https://"):
+            self.base = server
+        elif ssl:
+            self.base = "https://" + server
+        else:
+            self.base = "http://" + server
 
-    if name:
-        body['name'] = name
+    def _get_url(self, collection, path):
+        if not path.startswith('/'):
+            path = '/' + path
 
-    res = requests.post(url, data=body)
-    if res.status_code != 200:
-        raise RazielError(res)
+        return "{base}/v1/{collection}{path}".format(
+            base=self.base, collection=collection, path=path
+        )
 
-    return RazielFile(res.json())
+    def list_tree(self, path, limit=None, skip=None):
+        params = {}
+        url = self._get_url('trees', path)
 
+        if limit:
+            params['limit'] = limit
+        if skip:
+            params['skip'] = skip
 
+        res = requests.get(url, params=params)
 
-def download_file(url, path, tag=None, version=None, force=False):
-    params = {'format': 'stat'}
-    if tag:
-        params['tag'] = tag
-    if version:
-        params['version'] = version
+        if res.status_code != 200:
+            raise RazielError(res)
 
-    res = requests.get(url, params=params)
+        tree = TreeListing([
+            json.loads(line) for line in res.text.split('\n') if line.strip()
+        ])
 
-    if res.status_code != 200:
-        raise RazielError(res)
-
-    rf = RazielFile(res.json())
-
-    if path is None:
-        fp = sys.stdout.buffer
-    else:
-        if os.path.isdir(path):
-            path = os.path.join(path, rf.name)
-
-        if os.path.exists(path) and not force:
-            print("raziel: cannot overwrite existing file:", path,
-                  file=sys.stderr)
-            return None
-
-        fp = open(path, 'wb')
-
-    del params['format']
-    res = requests.get(url, params=params, stream=True)
-
-    for chunk in res.iter_content(0xffff):
-        fp.write(chunk)
-
-    if path is not None:
-        fp.close()
-
-    return 0
+        return tree
 
 
-def list_tree(url, skip=None, limit=None):
-    params = {}
-    if limit:
-        params['limit'] = limit
-    if skip:
-        params['skip'] = skip
 
-    res = requests.get(url, params=params)
+    def list_history(self, path, limit=None, skip=None):
+        url = self._get_url('history', path)
+        params = {}
+        if limit is not None:
+            params['limit'] = limit
+        if skip is not None:
+            params['skip'] = skip
 
-    if res.status_code != 200:
-        raise RazielError(res)
+        res = requests.get(url, params=params)
 
-    tree = TreeListing([
-        json.loads(line) for line in res.text.split('\n') if line.strip()
-    ])
+        if res.status_code != 200:
+            raise RazielError(res)
 
-    return tree
+        history = [
+            RazielFile(json.loads(line)) for line in res.text.split('\n')
+                if line.strip()
+        ]
 
+        return history
 
-def stat_file(url, tag=None, version=None):
-    params = {
-        'format': 'stat'
-    }
+    def download_file(self, path, dest=None, version=None, tag=None,
+                      force=False):
+        url = self._get_url('files', path)
 
-    if tag:
-        params['tag'] = tag
-    elif version:
-        params['version'] = version
+        src = self.stat_file(path, version=version, tag=tag)
+        params = {
+            'version': src.version,
+            'tag': src.tag
+        }
 
-    res = requests.get(url, params=params)
+        if dest is None:
+            fp = sys.stdout.buffer
+        else:
+            if os.path.isdir(dest):
+                dest = os.path.join(dest, src.name)
 
-    if res.status_code != 200:
-        raise RazielError(res)
+            if os.path.exists(dest) and not force:
+                raise FileExistsError(dest)
 
-    data = res.json()
-    rf = RazielFile(data)
+            fp = open(dest, 'wb')
 
-    return rf
+        res = requests.get(url, params=params, stream=True)
 
+        for chunk in res.iter_content(0xffff):
+            fp.write(chunk)
 
-def list_history(url, limit=None, skip=None, reverse=False):
-    params = {}
-    if limit:
-        params['limit'] = limit
-    if skip:
-        params['skip'] = skip
+        if dest is not None:
+            fp.close()
+            return dest
 
-    res = requests.get(url, params=params)
+        return None
 
-    if res.status_code != 200:
-        raise RazielError(res)
+    def stat_file(self, path, version=None, tag=None):
+        url = self._get_url('files', path)
+        params = {'format': 'stat'}
 
-    history = [
-        RazielFile(json.loads(line)) for line in res.text.split('\n') if line.strip()
-    ]
+        if version is not None:
+            params['version'] = version
+        if tag is not None:
+            params['tag'] = tag
 
-    if reverse:
-        history.reverse()
+        res = requests.get(url, params=params)
 
-    return history
+        if res.status_code != 200:
+            raise RazielError(res)
+
+        rf = RazielFile(res.json())
+
+        return rf
+
+    def upload_file(self, path, src, tag=None, api_key=None, protect=False,
+                    name=None):
+        url = self._get_url('files', path)
+        fp = open(src, 'rb')
+
+        body = {}
+
+        if api_key:
+            body['apiKey'] = api_key
+        elif protect:
+            body['protect'] = True
+
+        if tag:
+            body['tag'] = tag
+
+        if name:
+            body['name'] = name
+
+        res = requests.post(url, data=body, files={'file': fp})
+
+        if res.status_code != 200:
+            raise RazielError(res)
+
+        return RazielFile(res.json())
+
+    def link_file(self, path, target, api_key=None, protect=False):
+        url = self._get_url('files', path)
+        params = {
+            'action': 'symlink',
+            'target': target.url,
+            'version': target.version,
+            'tag': target.tag
+        }
+
+        if api_key:
+            params['apiKey'] = api_key
+        elif protect:
+            params['protect'] = True
+
+        res = requests.put(url, data=params)
+
+        if res.status_code != 200:
+            raise RazielError(res)
+
+        return RazielFile(res.json())
+
 
 
 def run(args):
     rc = None
-    url = normalize_url(args)
+    client = RazielClient(args.url)
+
     if args.upload:
-        return upload_file(url, args.upload, api_key=args.apikey,
-                           tag=args.tag, name=args.name)
+        rf = client.upload_file(args.path, args.upload, api_key=args.apikey,
+                                tag=args.tag, name=args.name,
+                                protect=args.protect)
+
+        rf.write()
+
+        if rf.api_key and args.protect:
+            print("!" * 50)
+            print("Generated API Key:", rf.api_key)
+            print("!" * 50)
+
+        rc = 0
     elif args.list:
-        tree = list_tree(url, skip=args.skip, limit=args.limit)
+        tree = client.list_tree(args.path, skip=args.skip, limit=args.limit)
         if tree:
             tree.write()
         rc = 0
     elif args.stat:
-        rf = stat_file(url, version=args.version, tag=args.tag)
+        rf = client.stat_file(args.path, version=args.version, tag=args.tag)
         if rf:
             rc = 0
             rf.write()
         else:
             rc = -1
     elif args.history:
-        history = list_history(url, skip=args.skip, limit=args.limit,
-                               reverse=args.reverse)
+        history = client.list_history(args.path, skip=args.skip,
+                                      limit=args.limit)
 
         if history:
             for (i, item) in enumerate(history):
@@ -313,10 +332,32 @@ def run(args):
                     print()
                     print('----')
                 item.write(level='short')
-
+        rc = 0
     elif args.download:
-        return download_file(url, args.download, tag=args.tag,
-                             version=args.version, force=args.force)
+        dest = args.download
+        if dest == '-':
+            dest = None
+
+        path = client.download_file(args.path, dest=dest, tag=args.tag,
+                                    version=args.version, force=args.force)
+        if path:
+            print("raziel: file downloaded:", path)
+
+        rc = 0
+    elif args.link:
+        target = client.stat_file(args.link, tag=args.tag,
+                                  version=args.version)
+        rf = client.link_file(args.path, target=target, api_key=args.apikey,
+                              protect=args.protect)
+
+        rf.write()
+        if rf.api_key and args.protect:
+            print("!" * 50)
+            print("Generated API Key:", rf.api_key)
+            print("!" * 50)
+
+    return rc
+
 
 
 def parse_args():
@@ -349,20 +390,25 @@ def parse_args():
                         help='download file to path')
     parser.add_argument('-l', '--list', action='store_true', help='list tree')
     parser.add_argument('-s', '--stat', action='store_true', help='stat file')
+    parser.add_argument('-x', '--link', action='store', metavar='TARGET',
+                        help='link to file TARGET')
     parser.add_argument('-H', '--history', action='store_true',
                         help='list file history')
 
     parser.add_argument('url', help='raziel url')
-    parser.add_argument('path', help='file path')
+    parser.add_argument('path', help='file path', nargs='?')
 
     args = parser.parse_args()
 
     if not (args.upload or args.list or args.stat or args.history
-            or args.download):
+            or args.download or args.link):
         print("raziel: no command specified, must be one of -u, -l, or -s",
               file=sys.stderr)
         parser.print_help()
         sys.exit(1)
+
+    if not args.path:
+        args.path = '/'
 
     return args
 
@@ -379,7 +425,7 @@ if __name__ == '__main__':
         print("raziel: failed to connect to server", file=sys.stderr)
         rc = -1
     except requests.exceptions.MissingSchema as e:
-        print("raziel: fuck:", e, file=sys.stderr)
+        print("raziel:", e, file=sys.stderr)
         rc = 1
     except requests.exceptions.Timeout:
         print("raziel: request timed out", file=sys.stderr)
@@ -387,5 +433,15 @@ if __name__ == '__main__':
     except OSError as e:
         print("raziel:", e.strerror or str(e), file=sys.stderr)
         rc = -e.errno if e.errno else -1
+    except IOError as e:
+        if hasattr(e, 'strerror') and e.strerror:
+            print("raziel:", e.strerror, file=sys.stderr)
+            rc = -e.errno
+        else:
+            print("raziel:", e, file=sys.stderr)
+            rc = -1
+    except Exception as e:
+        rc = -1
+        print("raziel: unknown error:", e, file=sys.stderr)
 
     sys.exit(rc)
