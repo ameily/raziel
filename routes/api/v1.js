@@ -246,6 +246,15 @@ files.post("*", function(req, res) {
   var tag = _.isString(req.body.tag) ? cleanFileName(req.body.tag) : null;
   var apiKey = _.isString(req.body.apiKey) ? req.body.apiKey : null;
   var clearApiKey = null;
+  var protect = false;
+
+  if(req.body.protect) {
+    if(_.isBoolean(req.body.protect)) {
+      protect = req.body.protect;
+    } else if(_.isString(req.body.protect)) {
+      protect = req.body.protect.toLowerCase() == "true";
+    }
+  }
 
   if(!req.files || !req.files.file) {
     // a file was not uploaded
@@ -282,14 +291,6 @@ files.post("*", function(req, res) {
 
     if(prev == null) {
       // This is a new file descriptor.
-      var protect = false;
-      if(req.body.protect) {
-        if(_.isBoolean(req.body.protect)) {
-          protect = req.body.protect;
-        } else if(_.isString(req.body.protect)) {
-          protect = req.body.protect.toLowerCase() == "true";
-        }
-      }
 
       models.TreeDescriptor.addFile(file);
 
@@ -317,6 +318,9 @@ files.post("*", function(req, res) {
           logger.debug("delete temporary upload file (unauthorized): %s", upload.file);
         })
 
+        return;
+      } else if(!prev.apiKey && (protect || apiKey)) {
+        res.status(401).json({ error: "cannot protect previously unprotected file" });
         return;
       }
 
@@ -358,8 +362,8 @@ files.post("*", function(req, res) {
       } else {
         logger.debug("saved file descriptor: %s [%d]", url, file.version);
         var json = file.toClient();
-        if(apiKey) {
-          json.apiKey = apiKey;
+        if(clearApiKey) {
+          json.apiKey = clearApiKey;
         }
         res.json(json);
       }
@@ -384,10 +388,18 @@ files.put('*', function(req, res) {
   // query for link and target files
   var qLink, qTarget;
   // if the file is new, protect it or not
-  var protect = req.body.protect;
+  var protect = false;
   // if protect = true and apiKey = false and the file doesn't exist, this var
   // will hold the generated api key in clear text.
   var clearApiKey;
+
+  if(req.body.protect) {
+    if(_.isBoolean(req.body.protect)) {
+      protect = req.body.protect;
+    } else if(_.isString(req.body.protect)) {
+      protect = req.body.protect.toLowerCase() == "true";
+    }
+  }
 
   if(url.length <= 1) {
     // the root is not a valid file
@@ -425,7 +437,7 @@ files.put('*', function(req, res) {
   }
 
   // first, retrieve the link file
-  models.FileDescriptor.findOne(qLink).sort({ _id: -1 }).exec(function(err, link) {
+  models.FileDescriptor.findOne(qLink).sort({ _id: -1 }).exec(function(err, src) {
     if(err) {
       // the quiery was invalid if an error occurred
       logger.info("invalid query for link %s: %s", url, err.toString());
@@ -433,11 +445,14 @@ files.put('*', function(req, res) {
       return;
     }
 
-    if(link) {
-      if(link.apiKey && !link.apiKeyMatches(apiKey)) {
+    if(src) {
+      if(src.apiKey && !src.apiKeyMatches(apiKey)) {
         // file is API key protected and api key doesn't match
         logger.info("unauthorized upload to %s", url);
         res.status(401).json({ error: "link file is protected by api key" });
+        return;
+      } else if(!src.apiKey && (protect || apiKey)) {
+        res.status(401).json({ error: "cannot protect previously unprotected file" });
         return;
       }
     }
@@ -461,12 +476,12 @@ files.put('*', function(req, res) {
       link = target.mklink({
         url: url,
         namespace: path.dirname(url),
-        version: link ? link.version + 1 : 1
+        version: src ? src.version + 1 : 1
       });
 
       if(apiKey) {
         link.setApiKey(apiKey);
-      } else if(protect) {
+      } else if(protect && link.version == 1) {
         clearApiKey = link.generateApiKey();
       }
 
@@ -487,7 +502,7 @@ files.put('*', function(req, res) {
 
           logger.info("created link: %s[%d] => %s[v%d]", url, link.version,
                       target.url, target.version);
-          res.status(200).json(link);
+          res.status(200).json(json);
         }
       });
     });
