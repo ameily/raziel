@@ -1,31 +1,24 @@
 var express = require('express');
 var _ = require('underscore');
+var cleanUrl = require('../models').cleanUrl;
 
 var router = express.Router();
+var explorer = express.Router();
+var files = express.Router();
 
-function cleanUrl(url) {
-  var parts = url.split('/');
-  var url = "";
-  var count = 0;
 
-  _.each(parts, function(part) {
-    if(part.length > 0) {
-      url += "/" + part;
-      count += 1;
-    }
-  });
-
-  if(url.length == 0 || count > 255) {
-    url = "/";
-  }
-
-  return url;
-}
-
-router.get('*', function(req, res, next) {
+explorer.get('*', function(req, res, next) {
   //var url = req.path.substring("/explorer".length);
   var url = req.path;
   res.render('explorer', { url: cleanUrl(url) });
 });
+
+files.get("*", function(req, res, next) {
+  var url = req.path;
+  res.render('file', { url: cleanUrl(url) });
+});
+
+router.use('/explorer', explorer);
+router.use('/file', files);
 
 module.exports = router;
