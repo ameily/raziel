@@ -13,7 +13,7 @@ var _ = require('underscore');
 var moment = require('moment');
 var ObjectId = require('mongoose').Types.ObjectId;
 var fs = require('fs');
-var logger = require('../../logger');
+var logger = require('../../logger').appLog;
 var path = require('path');
 
 var VALID_FILE_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,._ &";
@@ -50,7 +50,7 @@ function getFileDescriptor(req, cb) {
   var tag = req.query.tag || req.body.tag || null;
 
   var query = {
-    url: cleanUrl(req.path)
+    url: models.cleanUrl(req.path)
   };
 
   if(query.url.length <= 1) {
@@ -80,32 +80,11 @@ function getFileDescriptor(req, cb) {
   models.FileDescriptor.findOne(query).sort({ _id: -1 }).exec(cb);
 }
 
-///
-/// Parse url
-///
-function cleanUrl(url) {
-  var parts = url.split('/');
-  var url = "";
-  var count = 0;
-
-  _.each(parts, function(part) {
-    if(part.length > 0) {
-      url += "/" + part;
-      count += 1;
-    }
-  });
-
-  if(url.length == 0 || count > 255) {
-    url = "/";
-  }
-
-  return url;
-}
 
 
 
 trees.get('*', function(req, res) {
-  var namespace = cleanUrl(req.path);
+  var namespace = models.cleanUrl(req.path);
   var limit = req.query.limit || req.body.limit || null;
   var skip = req.query.skip || req.body.skip || null;
   var cursor = models.TreeDescriptor.find({ namespace: namespace }).sort({ name: 1 });
@@ -193,7 +172,7 @@ files.get("*", function(req, res) {
 });
 
 history.get('*', function (req, res) {
-  var cursor = models.FileDescriptor.find({ url: cleanUrl(req.path) }).sort({ _id: -1 });
+  var cursor = models.FileDescriptor.find({ url: models.cleanUrl(req.path) }).sort({ _id: -1 });
   var limit = parseInt(req.query.limit || req.body.limit || null);
   var skip = parseInt(req.query.skip || req.body.skip || null);
 
@@ -233,7 +212,7 @@ router.use('/files', files);
 ///   create new file
 ///
 files.post("*", function(req, res) {
-  var url = cleanUrl(req.path);
+  var url = models.cleanUrl(req.path);
 
   if(url.length <= 1) {
     // the root is not a valid file
@@ -376,7 +355,7 @@ files.post("*", function(req, res) {
 /// Make a symlink.
 ///
 files.put('*', function(req, res) {
-  var url = cleanUrl(req.path);
+  var url = models.cleanUrl(req.path);
   // target file url
   var targetUrl = req.body.target;
   // target file version

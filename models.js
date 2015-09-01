@@ -142,7 +142,30 @@ TreeDescriptorSchema.methods.toClient = function() {
 
 var TreeDescriptor = mongoose.model('Tree', TreeDescriptorSchema);
 
+///
+/// Parse and normalize a file path.
+///
+function cleanUrl(url) {
+  var parts = url.split('/');
+  var url = "";
+  var count = 0;
+
+  _.each(parts, function(part) {
+    if(part.length > 0) {
+      url += "/" + part;
+      count += 1;
+    }
+  });
+
+  if(url.length == 0 || count > 255) {
+    url = "/";
+  }
+
+  return url;
+}
+
 module.exports = {
   FileDescriptor: FileDescriptor,
-  TreeDescriptor: TreeDescriptor
+  TreeDescriptor: TreeDescriptor,
+  cleanUrl: cleanUrl
 };
