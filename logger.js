@@ -5,26 +5,11 @@
 var winston = require('winston');
 var util = require('util');
 var moment = require('moment');
-var colors = require('colors/safe');
 var fs = require('fs');
-var _ = require('underscore');
+var morgan = require('morgan');
+var FileStreamRotator = require('file-stream-rotator');
+var path = require('path');
 
-
-var colorMap = {
-  info: colors.green,
-  warn: colors.yellow,
-  error: colors.red,
-  debug: colors.cyan
-};
-
-function getLevelString(level) {
-  if(level == "info") {
-    return "INFO ";
-  } else if(level == "warn") {
-    return "WARN ";
-  }
-  return level.toUpperCase();
-}
 
 try {
   var stats = fs.statSync("./log");
@@ -32,59 +17,56 @@ try {
   fs.mkdirSync("./log");
 }
 
+var accessStream = FileStreamRotator.getStream({
+  filename: path.join(__dirname, "log", "access.log"),
+  frquency: 'daily',
+  verbose: false
+});
 
-var logger = new winston.Logger({
+var accessLog = morgan('combined', {stream: accessStream });
+
+
+var appLog = new winston.Logger({
   transports: [
     new winston.transports.Console({
       level: "debug",
       colorize: true,
       showLevel: true,
-
+      name: "stdout",
       timestamp: function() {
         return moment().format("HH:mm:ss");
-      },
-
-      formatter: function(opts) {
-        var c = colorMap[opts.level].bold || function(s) { return s; };
-
-        var log = util.format(
-          "[%s] %s %s", colors.grey.bold(opts.timestamp()),
-          c(getLevelString(opts.level)), opts.message
-        );
-
-        if(_.isObject(opts.meta) && !_.isEmpty(opts.meta)) {
-          log += "\n" + util.inspect(opts.meta);
-        }
-
-        return log;
-      },
-
-      handleExceptions: true
+      }
     }),
 
     new winston.transports.DailyRotateFile({
-      filename: "./log/app.log",
+      filename: path.join(__dirname, "log", "app.log"),
       level: "debug",
       tailable: true,
-      json: true,
+      name: "app-log",
+      json: false,
+      maxFiles: 5,
+      timestamp: function() {
+        return moment().format("HH:mm:ss");
+      }
+    }),
 
+    new winston.transports.DailyRotateFile({
+      filename: path.join(__dirname, "log", "error.log"),
+      level: "error",
+      name: "error-log",
+      tailable: true,
+      json: false,
+      maxFiles: 5,
       timestamp: function() {
         return moment().format("HH:mm:ss");
       },
-
-      /*
-      formatters: function(opts) {
-        return util.format(
-          "[%s] %s %s", opts.timestamp(),
-          getLevelString(opts.level), opts.message
-        );
-      },
-      */
-
       handleExceptions: true
     })
   ]
 });
 
 
-module.exports = logger;
+module.exports = {
+  appLog: appLog,
+  accessLog: accessLog
+};

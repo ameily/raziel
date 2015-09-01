@@ -2,10 +2,11 @@
 /// @copyright 2015 Adam Meily <meily.adam@gmail.com>
 ///
 
+// Libraries
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
-var logger = require('morgan');
+var logger = require('./logger');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var apiV1 = require('./routes/api/v1');
@@ -15,15 +16,15 @@ var multer = require('multer');
 var mmm = require('mmmagic');
 var crypto = require('crypto');
 var models = require('./models');
+var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
 
+// Routes
 var explorer = require('./routes/explorer');
-var fileRt = require('./routes/file');
 var index = require('./routes/index');
 var docs = require('./routes/docs');
-//var users = require('./routes/users');
 
+// Application
 var app = express();
-var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -31,10 +32,20 @@ app.set('view engine', 'jade');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
+
+// Use morgan for access log.
+app.use(logger.accessLog);
+
+// Parse JSON and url-encoded request bodies
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+
+///
+/// multer is used to manage streaming file uploads. Here, uploading files
+/// have their hashes calculated on the fly. After upload has completed, the
+/// database is queried to see if the file content already exists.
+///
 app.use(multer({
   onFileUploadStart: function(file, req, res) {
     // On upload start, begin hashing
@@ -55,12 +66,15 @@ app.use(multer({
     file.sha256 = file.sha256.digest('hex');
   },
   onParseEnd: function(req, next) {
+    // The request has completed, determine if the uploaded file already exists
     if(req.files && req.files.file) {
       models.FileDescriptor.findOne({ sha256: req.files.file.sha256 }).exec(function(err, file) {
         if(file) {
           req.files.file.dbFile = file;
           next();
         } else {
+          // This is a new file that we haven't seen before. Determine the
+          // file's mimetype.
           magic.detectFile(req.files.file.path, function(err, result) {
             if(result) {
               req.files.file.mimetype = result;
@@ -70,10 +84,12 @@ app.use(multer({
         }
       });
     } else {
+      // No file was uploaded.
       next();
     }
   }
 }));
+
 
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -96,8 +112,7 @@ mongoose.connection.once('open', function() {
 
   app.use("/", index);
   app.use("/docs", docs);
-  app.use('/explorer', explorer);
-  app.use("/file", fileRt);
+  app.use(explorer);
   app.use('/v1', apiV1);
 
   // catch 404 and forward to error handler
