@@ -57,7 +57,7 @@ block content
       h4 Upload Latest Release
       
       pre
-        | $ http --form POST http://localhost:3000/v1/my-project/releases/latest \
+        | $ http --form POST http://localhost:3000/v1/files/my-project/releases/latest \
         |         file@./release.tar.gz
       
       p
@@ -73,7 +73,7 @@ block content
       h4 Upload with an Explicit File Name
       
       pre
-        | $ http --form POST http://localhost:3000/v1/my-project/releases/latest \
+        | $ http --form POST http://localhost:3000/v1/files/my-project/releases/latest \
         |        file@./release.tar.gz \
         |        name=MyProject-1.2.tar.gz
       
@@ -83,7 +83,7 @@ block content
       h4 Upload with an Explicit Name and Tag
       
       pre
-        | $ http --form POST http://localhost:3000/v1/my-project/releases/latest \
+        | $ http --form POST http://localhost:3000/v1/files/my-project/releases/latest \
         |        file@./release.tar.gz \
         |        name=MyProject-1.2.tar.gz \
         |        tag=v1.2
@@ -97,7 +97,7 @@ block content
         | an automatically generated API key.
       
       pre
-        | $ http --form POST http://localhost:3000/v1/band/album/song.mp3 \
+        | $ http --form POST http://localhost:3000/v1/files/band/album/song.mp3 \
         |        file@./song.mp3 \
         |        protect=true
       
@@ -108,7 +108,7 @@ block content
       h4 Upload am Existing Write-Protected File
       
       pre
-        | $ http --form POST http://localhost:3000/v1/band/album/song.mp3 \
+        | $ http --form POST http://localhost:3000/v1/files/band/album/song.mp3 \
         |        file@./song-2.mp3 \
         |        apiKey=55a46b05143bce572b0f523c
       
