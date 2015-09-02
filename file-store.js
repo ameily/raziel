@@ -23,6 +23,9 @@ function FileStore(options, callback) {
   this.temp = path.join(this.root, 'temp');
   callback = callback || function throwError(err) { if(err) throw err; };
 
+  logger.debug("storage root: %s", this.root);
+  logger.debug("storage temp: %s", this.temp);
+
   this.ensureDirectory(this.root, function(err) {
     if(err) {
       callback(new VError(err, "failed to create storage directory '%s'", self.root));
@@ -35,8 +38,8 @@ function FileStore(options, callback) {
         } else {
           callback();
         }
-      }
-    });
+      });
+    }
   });
 }
 
@@ -88,19 +91,11 @@ FileStore.prototype.ensureFile = function(src, dest, callback) {
 
 
 FileStore.prototype.add = function(src, sha256, callback) {
-  var pending = new PendingFile({
-    src: src,
-    sha256: sha256,
-    root: this.root
-  });
+  var prefix = sha256[0] + sha256[1];
+  var body = sha256.substring(2);
 
-  pending.run(callback);
-
-  var prefix = options.sha256[0] + options.sha256[1];
-  var body = options.sha256.substring(2);
-
-  var prefixDir = path.join(options.root, prefix);
-  var dest = path.join(prefixDir, body);
+  var prefixDir = path.join(this.root, prefix);
+  var dest = path.join(body);
 
   this.ensureDirectory(prefixDir, function(err) {
     if(err) {
@@ -117,11 +112,11 @@ FileStore.prototype.add = function(src, sha256, callback) {
   });
 };
 
-FileStore.prototype.createReadStream = function(sha256) {
-  var prefix = options.sha256[0] + options.sha256[1];
-  var body = options.sha256.substring(2);
+FileStore.prototype.createReadStream = function(sha256, callback) {
+  var prefix = sha256[0] + sha256[1];
+  var body = sha256.substring(2);
 
-  var prefixDir = path.join(options.root, prefix);
+  var prefixDir = path.join(this.root, prefix);
   var src = path.join(prefixDir, body);
 
   return fs.createReadStream(src);
