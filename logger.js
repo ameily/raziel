@@ -35,7 +35,8 @@ var appLog = new winston.Logger({
       name: "stdout",
       timestamp: function() {
         return moment().format("HH:mm:ss");
-      }
+      },
+      handleExceptions: true
     }),
 
     new winston.transports.DailyRotateFile({
