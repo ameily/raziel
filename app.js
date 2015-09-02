@@ -44,6 +44,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 var storage = new FileStore({
   root: config.storage
+}, function(err) {
+  if(err) {
+    console.log(err.message);
+    throw err;
+  }
 });
 
 
@@ -113,8 +118,10 @@ app.use('/vendor', express.static(path.join(__dirname, 'bower_components')));
 
 mongoose.connect(config.mongodb);
 
+console.log("Connecting to MongoDB");
+
 mongoose.connection.once('open', function() {
-  //var gridfs = GridFs(mongoose.connection.db);
+  console.log("MongoDB connected");
 
   app.use(function(req, res, next) {
     // add GridFs to each request
