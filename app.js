@@ -8,15 +8,16 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('./logger');
 var cookieParser = require('cookie-parser');
+var config = require('./conf/app-config');
 var bodyParser = require('body-parser');
 var apiV1 = require('./routes/api/v1');
 var mongoose = require('mongoose');
-var GridFs = require("gridfs-stream");
 var multer = require('multer');
 var mmm = require('mmmagic');
 var crypto = require('crypto');
 var models = require('./models');
 var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+var FileStore = require('./file-store');
 
 // Routes
 var explorer = require('./routes/explorer');
@@ -41,12 +42,19 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 
+var storage = new FileStore({
+  root: config.storage
+});
+
+
 ///
 /// multer is used to manage streaming file uploads. Here, uploading files
 /// have their hashes calculated on the fly. After upload has completed, the
 /// database is queried to see if the file content already exists.
 ///
 app.use(multer({
+  dest: storage.temp,
+
   onFileUploadStart: function(file, req, res) {
     // On upload start, begin hashing
     file.md5 = crypto.createHash('md5');
@@ -68,20 +76,28 @@ app.use(multer({
   onParseEnd: function(req, next) {
     // The request has completed, determine if the uploaded file already exists
     if(req.files && req.files.file) {
-      models.FileDescriptor.findOne({ sha256: req.files.file.sha256 }).exec(function(err, file) {
-        if(file) {
-          req.files.file.dbFile = file;
-          next();
-        } else {
-          // This is a new file that we haven't seen before. Determine the
-          // file's mimetype.
-          magic.detectFile(req.files.file.path, function(err, result) {
-            if(result) {
-              req.files.file.mimetype = result;
-            }
-            next();
-          });
+      var upload = req.files.file;
+
+      storage.add(upload.path, upload.sha256, function(err, dest) {
+        if(err) {
+          throw err;
         }
+
+        models.FileDescriptor.findOne({ sha256: upload.sha256 }).exec(function(err, file) {
+          if(file) {
+            req.files.file.dbFile = file;
+            next();
+          } else {
+            // This is a new file that we haven't seen before. Determine the
+            // file's mimetype.
+            magic.detectFile(dest, function(err, result) {
+              if(result) {
+                req.files.file.mimetype = result;
+              }
+              next();
+            });
+          }
+        });
       });
     } else {
       // No file was uploaded.
@@ -95,17 +111,15 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'bower_components')));
 
-GridFs.mongo = mongoose.mongo;
-
-mongoose.connect("mongodb://localhost/raziel");
+mongoose.connect(config.mongodb);
 
 mongoose.connection.once('open', function() {
-  var gridfs = GridFs(mongoose.connection.db);
+  //var gridfs = GridFs(mongoose.connection.db);
 
   app.use(function(req, res, next) {
     // add GridFs to each request
     req.ctx = {
-      gridfs: gridfs
+      storage: storage
     };
     next();
   });

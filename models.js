@@ -15,7 +15,6 @@ var FileDescriptorSchema = new mongoose.Schema({
   apiKey: String,
   version: Number,
   tag: String,
-  gfsId: mongoose.Schema.Types.ObjectId,
   downloads: Number,
   name: String,
   lastDownload: Number,
@@ -83,8 +82,7 @@ FileDescriptorSchema.methods.mklink = function(params) {
     size: this.size,
     md5: this.md5,
     sha1: this.sha1,
-    sha256: this.sha256,
-    gfsId: this.gfsId
+    sha256: this.sha256
   });
 
   return link;

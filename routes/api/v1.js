@@ -154,7 +154,8 @@ files.get("*", function(req, res) {
           res.set('Content-Disposition', 'attachment; filename="' + file.name + '"');
         }
 
-        req.ctx.gridfs.createReadStream({ _id: file.gfsId }).pipe(res);
+        //req.ctx.gridfs.createReadStream({ _id: file.gfsId }).pipe(res);
+        req.ctx.storage.createReadStream(file.sha256).pipe(res);
 
         // Update file statistics
         models.FileDescriptor.update({_id: file._id}, {
@@ -171,6 +172,9 @@ files.get("*", function(req, res) {
   });
 });
 
+///
+/// List file history.
+///
 history.get('*', function (req, res) {
   var cursor = models.FileDescriptor.find({ url: models.cleanUrl(req.path) }).sort({ _id: -1 });
   var limit = parseInt(req.query.limit || req.body.limit || null);
@@ -256,7 +260,6 @@ files.post("*", function(req, res) {
       namespace: path.dirname(url),
       version: 1,
       name: req.body.name || upload.originalname || path.basename(url) || "",
-      gfsId: null,
       apiKey: null,
       downloads: 0,
       lastDownload: 0,
@@ -293,10 +296,6 @@ files.post("*", function(req, res) {
         logger.info("unauthorized upload to %s", url);
         res.status(401).json({ error: "file is protected by api key" });
 
-        fs.unlink(upload.path, function(err) {
-          logger.debug("delete temporary upload file (unauthorized): %s", upload.file);
-        })
-
         return;
       } else if(!prev.apiKey && (protect || apiKey)) {
         res.status(401).json({ error: "cannot protect previously unprotected file" });
@@ -307,29 +306,6 @@ files.post("*", function(req, res) {
       file.apiKey = prev.apiKey;
 
       logger.info("created new version: %s [%d]", url, file.version);
-    }
-
-    if(upload.dbFile) {
-      // The already exists in the database
-      file.gfsId = upload.dbFile.gfsId;
-      logger.info("duplicate file content found: %s [%d]", url, file.version);
-
-      fs.unlink(upload.path, function() {
-        logger.debug("deleted temporary upload file [duplicate]: %s", upload.path);
-      });
-    } else {
-      file.gfsId = new ObjectId();
-
-      var gridStream = req.ctx.gridfs.createWriteStream({
-        _id: file.gfsId
-      });
-
-      fs.createReadStream(upload.path).pipe(gridStream).on('close', function(gridfs) {
-        logger.info("completed file import: %s => %s", upload.path, url);
-        fs.unlink(upload.path, function() {
-          logger.debug("deleted temporary upload file: %s", upload.path);
-        });
-      });
     }
 
     file.save(function(err) {
