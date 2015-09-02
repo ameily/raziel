@@ -46,9 +46,14 @@ function FileStore(options, callback) {
 FileStore.prototype.ensureDirectory = function(dir, callback) {
   fs.stat(dir, function(err, stat) {
     if(err && err.code == 'ENOENT') {
-      logger.info("mkdir( %s )", dir);
+      logger.debug("mkdir( %s )", dir);
       fs.mkdir(dir, function(err) {
-        callback(err);
+        if(err) {
+          callback(err);
+        } else {
+          logger.info("created new storage directory: %s", dir);
+          callback(null);
+        }
       });
     } else if(!err) {
       if(stat.isDirectory()) {
@@ -65,47 +70,56 @@ FileStore.prototype.ensureDirectory = function(dir, callback) {
 FileStore.prototype.ensureFile = function(src, dest, callback) {
   fs.stat(dest, function(err, stat) {
     if(err && err.code == 'ENOENT') {
-      logger.info("mv '%s' => '%s'", src, dest);
+      // File does not exist
+      logger.debug("mv '%s' => '%s'", src, dest);
       fs.rename(src, dest, function(err) {
         if(!err) {
-          callback();
+          logger.info("stored new file: %s", dest);
+          callback(null);
         } else if(err.code == 'EEXIST') {
+          logger.debug("duplicate file: %s", dest);
           fs.unlink(src, function(err) {
-            callback();
+            callback(null);
           });
         } else {
           callback(err);
         }
       });
     } else if(!err) {
+      // File exists
       if(stat.isFile()) {
-        callback();
+        logger.debug("duplicate file: %s", dest);
+        fs.unlink(src, function(err) {
+          callback(null);
+        });
       } else {
         callback(new Error("path is not a file: " + dest));
       }
     } else {
-      callback(err);
+      // Probably permission error
+      callback(new VError(err, "failed to stat file"));
     }
   });
 };
 
 
 FileStore.prototype.add = function(src, sha256, callback) {
+  var self = this;
   var prefix = sha256[0] + sha256[1];
   var body = sha256.substring(2);
 
   var prefixDir = path.join(this.root, prefix);
-  var dest = path.join(body);
+  var dest = path.join(prefixDir, body);
 
   this.ensureDirectory(prefixDir, function(err) {
     if(err) {
       callback(err);
     } else {
-      this.ensureFile(src, dest, function(err) {
+      self.ensureFile(src, dest, function(err) {
         if(err) {
           callback(err);
         } else {
-          callback();
+          callback(null, dest);
         }
       });
     }
