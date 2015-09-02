@@ -258,8 +258,8 @@ files.post("*", function(req, res) {
   // the file uploaded
   var upload = req.files.file;
 
-  logger.debug("upload to %s: %s, type: %s, size: %d => ", url,
-              upload.originalname, upload.mimetype, upload.size, upload.path);
+  //logger.debug("upload to %s: %s, type: %s, size: %d => ", url,
+  //            upload.originalname, upload.mimetype, upload.size, upload.path);
 
 
 
@@ -296,7 +296,7 @@ files.post("*", function(req, res) {
         file.setApiKey(apiKey);
       }
 
-      logger.info("created new file descriptor: %s", url);
+      logger.info("created new file descriptor: %s; sha256: %s", url, upload.sha256);
     } else {
       // file already exists
 
@@ -315,7 +315,7 @@ files.post("*", function(req, res) {
       file.version = prev.version + 1;
       file.apiKey = prev.apiKey;
 
-      logger.info("created new version: %s [%d]", url, file.version);
+      logger.info("created new version: %s [%d]; sha256: %s", url, file.version, upload.sha256);
     }
 
     file.save(function(err) {
