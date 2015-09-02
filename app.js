@@ -18,6 +18,7 @@ var crypto = require('crypto');
 var models = require('./models');
 var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
 var FileStore = require('./file-store');
+var VError = require('verror');
 
 // Routes
 var explorer = require('./routes/explorer');
@@ -85,9 +86,12 @@ app.use(multer({
 
       storage.add(upload.path, upload.sha256, function(err, dest) {
         if(err) {
-          throw err;
+          throw new VError(err, "failed to add upload %s", upload.path);
         }
 
+        // The uploaded file has been successfully placed into the file store.
+
+        // Determine if the uploaded path is new or contains an existing file
         models.FileDescriptor.findOne({ sha256: upload.sha256 }).exec(function(err, file) {
           if(file) {
             req.files.file.dbFile = file;
