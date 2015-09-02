@@ -145,17 +145,27 @@ files.get("*", function(req, res) {
         // Send file content
         logger.info("get content: %s", req.path);
 
-        res.set({
-          'Content-Type': file.mimetype,
-          'Content-Length': file.size
-        });
-
-        if(file.name) {
-          res.set('Content-Disposition', 'attachment; filename="' + file.name + '"');
-        }
-
         //req.ctx.gridfs.createReadStream({ _id: file.gfsId }).pipe(res);
-        req.ctx.storage.createReadStream(file.sha256).pipe(res);
+        var stream = req.ctx.storage.createReadStream(file.sha256).on('error', function(err) {
+          if(err.code == 'ENOENT') {
+            logger.error("file content doesn't exist: %s [%s]", file.url, file.sha256);
+            res.status(404).json({ error: "file not found" });
+          } else {
+            res.status(500).json({ error: "unhandled exception" });
+            logger.error("unhandled exception for file %s: %s; %s",
+                         file.sha256,err.message, er.stack);
+          }
+        }).on('open', function(fd) {
+          res.set({
+            'Content-Type': file.mimetype,
+            'Content-Length': file.size
+          });
+
+          if(file.name) {
+            res.set('Content-Disposition', 'attachment; filename="' + file.name + '"');
+          }
+
+        }).pipe(res);
 
         // Update file statistics
         models.FileDescriptor.update({_id: file._id}, {
