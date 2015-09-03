@@ -6,7 +6,7 @@ var mongoose = require('mongoose');
 var crypto = require('crypto');
 var ObjectId = mongoose.Types.ObjectId;
 var _ = require('underscore');
-var logger = require('./logger');
+var logger = require('./logger').appLog;
 
 
 var FileDescriptorSchema = new mongoose.Schema({
