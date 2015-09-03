@@ -16,14 +16,12 @@ var fs = require('fs');
 var logger = require('../../logger').appLog;
 var path = require('path');
 
-var VALID_FILE_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,._ &";
 
-// TODO comments
-// TODO logging
+var VALID_FILE_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,._ &";
 
 
 ///
-/// Clean a file name.
+/// Clean a file name, replacing any invalid characters with -'s.
 ///
 function cleanFileName(name) {
   var result = "";
@@ -43,7 +41,7 @@ function cleanFileName(name) {
 }
 
 ///
-/// Retrieve an Enoch file from the database.
+/// Retrieve an Raziel file from the database.
 ///
 function getFileDescriptor(req, cb) {
   var version = req.query.version || req.body.version || null;
