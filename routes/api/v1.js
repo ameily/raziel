@@ -21,7 +21,7 @@ var VALID_FILE_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 
 
 ///
-/// Clean a file name, replacing any invalid characters with -'s.
+/// Clean a file name, replacing any invalid characters with -'s.
 ///
 function cleanFileName(name) {
   var result = "";
