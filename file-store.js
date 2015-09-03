@@ -4,6 +4,12 @@ var fs = require('fs');
 var logger = require('./logger').appLog;
 var util = require('util');
 var VError = require('verror');
+var crypto = require('crypto');
+var models = require('./models');
+var multer = require('multer');
+var mmm = require('mmmagic');
+var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+
 
 ///
 /// Files stored on the filesystem by their sha256 hashes. Like git, the first
@@ -21,6 +27,7 @@ function FileStore(options, callback) {
   var self = this;
   this.root = path.resolve(options.root);
   this.temp = path.join(this.root, 'temp');
+  this.multer = null;
   callback = callback || function throwError(err) { if(err) throw err; };
 
   logger.debug("storage root: %s", this.root);
@@ -31,12 +38,13 @@ function FileStore(options, callback) {
       callback(new VError(err, "failed to create storage directory '%s'", self.root));
     } else {
       self.ensureDirectory(self.temp, function(err) {
-        if(err) {
+        if(err && err.code != 'EEXIST') {
           callback(new VError(
             err, "failed to create temp storage directory '%s'", self.temp
           ));
         } else {
-          callback();
+          // initialize the multer middleware for upload management
+          self.initMulter(callback);
         }
       });
     }
@@ -44,6 +52,7 @@ function FileStore(options, callback) {
 }
 
 FileStore.prototype.ensureDirectory = function(dir, callback) {
+  logger.debug("ensureDirectory( %s )", dir);
   fs.stat(dir, function(err, stat) {
     if(err && err.code == 'ENOENT') {
       logger.debug("mkdir( %s )", dir);
@@ -134,6 +143,69 @@ FileStore.prototype.createReadStream = function(sha256, callback) {
   var src = path.join(prefixDir, body);
 
   return fs.createReadStream(src);
+};
+
+FileStore.prototype.initMulter = function(callback) {
+  var self = this;
+
+  this.multer = multer({
+    dest: this.temp,
+
+    onFileUploadStart: function(file, req, res) {
+      // On upload start, begin hashing
+      file.md5 = crypto.createHash('md5');
+      file.sha1 = crypto.createHash('sha1');
+      file.sha256 = crypto.createHash('sha256');
+    },
+    onFileUploadData: function(file, data, req, res) {
+      // updated hashes
+      file.md5.update(data);
+      file.sha1.update(data);
+      file.sha256.update(data);
+    },
+    onFileUploadComplete: function(file, req, res) {
+      // complete file hashes
+      file.md5 = file.md5.digest('hex');
+      file.sha1 = file.sha1.digest('hex');
+      file.sha256 = file.sha256.digest('hex');
+    },
+    onParseEnd: function(req, next) {
+      // The request has completed, determine if the uploaded file already exists
+      if(req.files && req.files.file) {
+        var upload = req.files.file;
+
+        self.add(upload.path, upload.sha256, function(err, dest) {
+          if(err) {
+            throw new VError(err, "failed to add upload %s", upload.path);
+          }
+
+          // The uploaded file has been successfully placed into the file store.
+
+          // Determine if the uploaded path is new or contains an existing file
+          models.FileDescriptor.findOne({ sha256: upload.sha256 }).exec(function(err, file) {
+            if(file) {
+              req.files.file.dbFile = file;
+              next();
+            } else {
+              // This is a new file that we haven't seen before. Determine the
+              // file's mimetype.
+              magic.detectFile(dest, function(err, result) {
+                if(result) {
+                  req.files.file.mimetype = result;
+                }
+                next();
+              });
+            }
+          });
+        });
+      } else {
+        // No file was uploaded.
+        next();
+      }
+    }
+  });
+
+  callback();
 };
 
 
