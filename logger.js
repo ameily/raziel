@@ -9,6 +9,7 @@ var fs = require('fs');
 var morgan = require('morgan');
 var FileStreamRotator = require('file-stream-rotator');
 var path = require('path');
+var config = require('./conf/app-config');
 
 
 try {
@@ -26,44 +27,48 @@ var accessStream = FileStreamRotator.getStream({
 var accessLog = morgan('combined', {stream: accessStream });
 
 
+var transports = [
+  new winston.transports.DailyRotateFile({
+    filename: path.join(__dirname, "log", "app.log"),
+    level: config.log.level || "info",
+    tailable: true,
+    name: "app-log",
+    json: false,
+    maxFiles: 5,
+    timestamp: function() {
+      return moment().format("HH:mm:ss");
+    }
+  }),
+
+  new winston.transports.DailyRotateFile({
+    filename: path.join(__dirname, "log", "error.log"),
+    level: "error",
+    name: "error-log",
+    tailable: true,
+    json: false,
+    maxFiles: 5,
+    timestamp: function() {
+      return moment().format("HH:mm:ss");
+    },
+    handleExceptions: true
+  })
+];
+
+if(config.log.stdout) {
+  transports.push(new winston.transports.Console({
+    level: config.log.level || "info",
+    colorize: true,
+    showLevel: true,
+    name: "stdout",
+    timestamp: function() {
+      return moment().format("HH:mm:ss");
+    },
+    handleExceptions: true
+  }));
+}
+
 var appLog = new winston.Logger({
-  transports: [
-    new winston.transports.Console({
-      level: "debug",
-      colorize: true,
-      showLevel: true,
-      name: "stdout",
-      timestamp: function() {
-        return moment().format("HH:mm:ss");
-      },
-      handleExceptions: true
-    }),
-
-    new winston.transports.DailyRotateFile({
-      filename: path.join(__dirname, "log", "app.log"),
-      level: "debug",
-      tailable: true,
-      name: "app-log",
-      json: false,
-      maxFiles: 5,
-      timestamp: function() {
-        return moment().format("HH:mm:ss");
-      }
-    }),
-
-    new winston.transports.DailyRotateFile({
-      filename: path.join(__dirname, "log", "error.log"),
-      level: "error",
-      name: "error-log",
-      tailable: true,
-      json: false,
-      maxFiles: 5,
-      timestamp: function() {
-        return moment().format("HH:mm:ss");
-      },
-      handleExceptions: true
-    })
-  ]
+  transports: transports
 });
 
 
