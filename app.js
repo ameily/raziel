@@ -12,13 +12,12 @@ var config = require('./conf/app-config');
 var bodyParser = require('body-parser');
 var apiV1 = require('./routes/api/v1');
 var mongoose = require('mongoose');
-var multer = require('multer');
-var mmm = require('mmmagic');
-var crypto = require('crypto');
-var models = require('./models');
-var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+
+
 var FileStore = require('./file-store');
 var VError = require('verror');
+var http = require('http');
+var async = require('async');
 
 // Routes
 var explorer = require('./routes/explorer');
@@ -43,133 +42,91 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 
-var storage = new FileStore({
-  root: config.storage
-}, function(err) {
-  if(err) {
-    console.log(err.message);
-    throw err;
-  }
-});
-
-
-///
-/// multer is used to manage streaming file uploads. Here, uploading files
-/// have their hashes calculated on the fly. After upload has completed, the
-/// database is queried to see if the file content already exists.
-///
-app.use(multer({
-  dest: storage.temp,
-
-  onFileUploadStart: function(file, req, res) {
-    // On upload start, begin hashing
-    file.md5 = crypto.createHash('md5');
-    file.sha1 = crypto.createHash('sha1');
-    file.sha256 = crypto.createHash('sha256');
-  },
-  onFileUploadData: function(file, data, req, res) {
-    // updated hashes
-    file.md5.update(data);
-    file.sha1.update(data);
-    file.sha256.update(data);
-  },
-  onFileUploadComplete: function(file, req, res) {
-    // complete file hashes
-    file.md5 = file.md5.digest('hex');
-    file.sha1 = file.sha1.digest('hex');
-    file.sha256 = file.sha256.digest('hex');
-  },
-  onParseEnd: function(req, next) {
-    // The request has completed, determine if the uploaded file already exists
-    if(req.files && req.files.file) {
-      var upload = req.files.file;
-
-      storage.add(upload.path, upload.sha256, function(err, dest) {
-        if(err) {
-          throw new VError(err, "failed to add upload %s", upload.path);
-        }
-
-        // The uploaded file has been successfully placed into the file store.
-
-        // Determine if the uploaded path is new or contains an existing file
-        models.FileDescriptor.findOne({ sha256: upload.sha256 }).exec(function(err, file) {
-          if(file) {
-            req.files.file.dbFile = file;
-            next();
-          } else {
-            // This is a new file that we haven't seen before. Determine the
-            // file's mimetype.
-            magic.detectFile(dest, function(err, result) {
-              if(result) {
-                req.files.file.mimetype = result;
-              }
-              next();
-            });
-          }
-        });
-      });
-    } else {
-      // No file was uploaded.
-      next();
-    }
-  }
-}));
+var storage;
 
 
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'bower_components')));
 
-mongoose.connect(config.mongodb);
+// initialize mongodb and the file store
+async.series([
+  // Initialize file store
+  function(cb) {
+    logger.appLog.debug("initializing file store: %s", config.storage);
+    storage = new FileStore({ root: config.storage }, cb);
+  },
 
-console.log("Connecting to MongoDB");
+  // initialize mongodb
+  function(cb) {
+    logger.appLog.debug("connecting to MongoDB: %s", config.mongodb);
+    mongoose.connect(config.mongodb, cb)
+  }],
 
-mongoose.connection.once('open', function() {
-  console.log("MongoDB connected");
+  // setup the routes and then start the http server
+  function(err) {
 
-  app.use(function(req, res, next) {
-    // add GridFs to each request
-    req.ctx = {
-      storage: storage
-    };
-    next();
-  });
+    if(err) {
+      throw err;
+    }
 
-  app.use("/", index);
-  app.use("/docs", docs);
-  app.use(explorer);
-  app.use('/v1', apiV1);
+    ///
+    /// multer is used to manage streaming file uploads. Here, uploading files
+    /// have their hashes calculated on the fly. After upload has completed, the
+    /// database is queried to see if the file content already exists.
+    ///
+    app.use(storage.multer);
 
-  // catch 404 and forward to error handler
-  app.use(function(req, res, next) {
-    var err = new Error('Not Found');
-    err.status = 404;
-    next(err);
-  });
+    app.use(function(req, res, next) {
+      // add GridFs to each request
+      req.ctx = {
+        storage: storage
+      };
+      next();
+    });
 
-  // error handlers
+    app.use("/", index);
+    app.use("/docs", docs);
+    app.use(explorer);
+    app.use('/v1', apiV1);
 
-  // development error handler
-  // will print stacktrace
-  if(app.get('env') === 'development') {
+    // catch 404 and forward to error handler
+    app.use(function(req, res, next) {
+      var err = new Error('Not Found');
+      err.status = 404;
+      next(err);
+    });
+
+    // error handlers
+
+    // development error handler
+    // will print stacktrace
+    if(app.get('env') === 'development') {
+      app.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+          message: err.message,
+          error: err
+        });
+      });
+    }
+
+    // production error handler
+    // no stacktraces leaked to user
     app.use(function(err, req, res, next) {
       res.status(err.status || 500);
       res.render('error', {
         message: err.message,
-        error: err
+        error: {}
       });
     });
-  }
 
-  // production error handler
-  // no stacktraces leaked to user
-  app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
-    res.render('error', {
-      message: err.message,
-      error: {}
+    var server = http.createServer(app);
+
+    server.listen(config.port);
+    server.on('listening', function() {
+      logger.appLog.info("HTTP server running on port %d", config.port);
     });
-  });
 });
 
 
